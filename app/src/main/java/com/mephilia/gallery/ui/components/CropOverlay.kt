@@ -35,6 +35,19 @@ fun aspectPresets(originalRatio: Float, freeLabel: String, originalLabel: String
     AspectPreset("16:9", 16f / 9f),
 )
 
+/**
+ * Fait tourner un recadrage normalisé avec l'image, de [quarterTurns] quarts de tour
+ * (positif = sens horaire), pour qu'il ne soit pas perdu lors d'une rotation.
+ */
+fun Rect.rotatedBy(quarterTurns: Int): Rect {
+    var r = this
+    repeat(quarterTurns.mod(4)) {
+        // Sens horaire : le point (x, y) devient (1 - y, x)
+        r = Rect(1f - r.bottom, r.left, 1f - r.top, r.right)
+    }
+    return r
+}
+
 /** Plus grand rectangle centré de ratio [ratio] (largeur/hauteur en pixels) dans un contenu de ratio [contentRatio]. */
 fun centeredCrop(ratio: Float?, contentRatio: Float): Rect {
     if (ratio == null) return FullCrop

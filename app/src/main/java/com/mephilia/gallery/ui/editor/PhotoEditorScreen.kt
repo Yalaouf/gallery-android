@@ -33,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
+import com.mephilia.gallery.ui.components.rotatedBy
 
 @Composable
 fun PhotoEditorScreen(item: MediaItem, onClose: () -> Unit) {
@@ -55,7 +56,10 @@ fun PhotoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     var saving by remember { mutableStateOf(false) }
 
     fun rotate(delta: Int) {
-        edits = edits.copy(quarterTurns = edits.quarterTurns + delta, crop = FullCrop)
+        // Le recadrage tourne avec la photo au lieu d'être perdu ; format repassé en "Libre"
+        // car un format imposé (ex. 4:3) ne correspond plus une fois tourné.
+        // Avec le miroir, la rotation apparaît inversée à l'écran, d'où le sens opposé
+        edits = edits.copy(quarterTurns = edits.quarterTurns + delta, crop = edits.crop.rotatedBy(if (edits.flipH) -delta else delta))
         presetIndex = 0
     }
 

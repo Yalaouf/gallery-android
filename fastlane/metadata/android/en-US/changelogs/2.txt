@@ -1,0 +1,4 @@
+Trim, crop and rotate can now be combined in one editing session:
+• Rotating a photo or video keeps your crop instead of resetting it
+• The video preview shows the cropped result while trimming or rotating
+• A dot on the editing tools shows which edits are active

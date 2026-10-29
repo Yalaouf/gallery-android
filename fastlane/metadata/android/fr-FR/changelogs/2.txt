@@ -1,0 +1,4 @@
+Découpage, recadrage et rotation peuvent maintenant être combinés dans une même retouche :
+• Pivoter une photo ou une vidéo conserve le recadrage au lieu de le réinitialiser
+• L'aperçu vidéo montre le résultat recadré pendant le découpage ou la rotation
+• Un point sur les outils indique les modifications en cours

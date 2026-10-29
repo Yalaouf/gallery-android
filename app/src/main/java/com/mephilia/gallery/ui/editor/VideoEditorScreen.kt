@@ -69,6 +69,10 @@ import com.mephilia.gallery.ui.components.formatDuration
 import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
+import com.mephilia.gallery.ui.components.rotatedBy
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Rect
+import kotlin.math.roundToInt
 
 private enum class VideoTool { Trim, Crop, Rotate }
 
@@ -133,12 +137,15 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     val originalLabel = stringResource(R.string.aspect_original)
     val presets = remember(ratio, freeLabel) { aspectPresets(ratio, freeLabel, originalLabel) }
     val duration = info?.durationMs ?: 0L
-    val edited = startMs > 0 || (endMs in 1 until duration) || crop != FullCrop ||
+    val trimmed = startMs > 0 || (endMs in 1 until duration)
+    val edited = trimmed || crop != FullCrop ||
         quarterTurns.mod(4) != 0 || flipH
 
     fun rotate(delta: Int) {
         quarterTurns += delta
-        crop = FullCrop
+        // Le recadrage tourne avec la vidéo au lieu d'être perdu
+        // (avec le miroir, la rotation apparaît inversée à l'écran, d'où le sens opposé)
+        crop = crop.rotatedBy(if (flipH) -delta else delta)
         presetIndex = 0
     }
 
@@ -155,14 +162,18 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
             if (info == null) {
                 CircularProgressIndicator()
             } else {
-                FitBox(ratio) {
-                    // TextureView (contrairement à SurfaceView) peut être pivotée et retournée à l'affichage
-                    Transformed(quarterTurns, flipH) {
-                        AndroidView(
-                            factory = { ctx -> TextureView(ctx).also { player.setVideoTextureView(it) } },
-                            onRelease = { player.clearVideoTextureView(it) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                // Hors de l'outil Recadrer, l'aperçu montre le résultat recadré (ce qui sera enregistré)
+                val showCropped = tool != VideoTool.Crop
+                FitBox(if (showCropped) ratio * crop.width / crop.height else ratio) {
+                    CroppedTo(if (showCropped) crop else FullCrop) {
+                        // TextureView (contrairement à SurfaceView) peut être pivotée et retournée à l'affichage
+                        Transformed(quarterTurns, flipH) {
+                            AndroidView(
+                                factory = { ctx -> TextureView(ctx).also { player.setVideoTextureView(it) } },
+                                onRelease = { player.clearVideoTextureView(it) },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                     scrubMs?.let { ms ->
                         Text(
@@ -275,12 +286,12 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                ToolButton(Icons.Rounded.ContentCut, stringResource(R.string.tool_trim), selected = tool == VideoTool.Trim) { tool = VideoTool.Trim }
-                ToolButton(Icons.Rounded.Crop, stringResource(R.string.tool_crop), selected = tool == VideoTool.Crop) {
+                ToolButton(Icons.Rounded.ContentCut, stringResource(R.string.tool_trim), selected = tool == VideoTool.Trim, active = trimmed) { tool = VideoTool.Trim }
+                ToolButton(Icons.Rounded.Crop, stringResource(R.string.tool_crop), selected = tool == VideoTool.Crop, active = crop != FullCrop) {
                     player.pause()
                     tool = VideoTool.Crop
                 }
-                ToolButton(Icons.Rounded.Rotate90DegreesCw, stringResource(R.string.tool_rotate), selected = tool == VideoTool.Rotate) {
+                ToolButton(Icons.Rounded.Rotate90DegreesCw, stringResource(R.string.tool_rotate), selected = tool == VideoTool.Rotate, active = quarterTurns.mod(4) != 0 || flipH) {
                     tool = VideoTool.Rotate
                 }
                 ToolButton(Icons.Rounded.RestartAlt, stringResource(R.string.tool_reset)) {
@@ -312,6 +323,21 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
             onClose()
         },
     )
+}
+
+/** N'affiche que la zone [crop] (normalisée) de [content], agrandie pour remplir l'espace. */
+@Composable
+private fun CroppedTo(crop: Rect, content: @Composable () -> Unit) {
+    Layout(content, Modifier.fillMaxSize().clipToBounds()) { measurables, constraints ->
+        val w = constraints.maxWidth
+        val h = constraints.maxHeight
+        val fullW = (w / crop.width).roundToInt()
+        val fullH = (h / crop.height).roundToInt()
+        val placeable = measurables.first().measure(Constraints.fixed(fullW, fullH))
+        layout(w, h) {
+            placeable.place((-crop.left * fullW).roundToInt(), (-crop.top * fullH).roundToInt())
+        }
+    }
 }
 
 /**

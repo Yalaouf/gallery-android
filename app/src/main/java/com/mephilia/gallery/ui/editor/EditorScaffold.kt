@@ -40,6 +40,7 @@ import com.mephilia.gallery.ui.components.AspectPreset
 import com.mephilia.gallery.ui.screens.SystemBars
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
+import androidx.compose.foundation.shape.CircleShape
 
 /** Squelette commun des éditeurs : barre du haut, zone d'aperçu, outils en bas. */
 @Composable
@@ -112,11 +113,29 @@ fun AspectChips(presets: List<AspectPreset>, selected: AspectPreset, onSelect: (
     }
 }
 
+/** [active] : un point signale que cet outil a une modification en cours. */
 @Composable
-fun ToolButton(icon: ImageVector, label: String, selected: Boolean = false, onClick: () -> Unit) {
+fun ToolButton(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean = false,
+    active: Boolean = false,
+    onClick: () -> Unit,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        IconButton(onClick = onClick) {
-            Icon(icon, label, tint = if (selected) MaterialTheme.colorScheme.primary else Color.White)
+        Box {
+            IconButton(onClick = onClick) {
+                Icon(icon, label, tint = if (selected) MaterialTheme.colorScheme.primary else Color.White)
+            }
+            if (active) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 8.dp, end = 8.dp)
+                        .size(8.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                )
+            }
         }
         Text(
             label,

@@ -1,0 +1,27 @@
+# Fichier à proposer au dépôt fdroiddata : https://gitlab.com/fdroid/fdroiddata (dossier metadata/)
+Categories:
+  - Graphics
+  - Multimedia
+License: GPL-3.0-or-later
+AuthorName: Yalaouf
+SourceCode: https://github.com/Yalaouf/gallery-android
+IssueTracker: https://github.com/Yalaouf/gallery-android/issues
+Changelog: https://github.com/Yalaouf/gallery-android/releases
+
+AutoName: Gallery
+
+RepoType: git
+Repo: https://github.com/Yalaouf/gallery-android.git
+
+Builds:
+  - versionName: '1.0'
+    versionCode: 1
+    commit: v1.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '1.0'
+CurrentVersionCode: 1

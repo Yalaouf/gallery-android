@@ -1,0 +1,177 @@
+<resources>
+    <string name="app_name">Gallery</string>
+
+    <!-- Actions communes -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_share">Share</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_move">Move</string>
+    <string name="action_info">Info</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_all">All</string>
+    <string name="action_select_all">Select all</string>
+    <string name="action_cancel_selection">Cancel selection</string>
+    <string name="action_sort_filter">Sort and filter</string>
+    <string name="action_sort">Sort</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_allow">Allow</string>
+
+    <!-- Permissions -->
+    <string name="perm_title">Access your photos</string>
+    <string name="perm_text">The gallery needs access to your photos and videos to show them.</string>
+    <string name="perm_button">Allow access</string>
+    <string name="partial_access">Access limited to some photos</string>
+    <string name="partial_access_button">Allow all</string>
+
+    <!-- Accueil -->
+    <string name="tab_photos">Photos</string>
+    <string name="tab_albums">Albums</string>
+    <string name="subtitle_with_sort">%1$s · %2$s</string>
+    <plurals name="items_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="folders_count">
+        <item quantity="one">%d folder</item>
+        <item quantity="other">%d folders</item>
+    </plurals>
+    <plurals name="selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <string name="selection_hint">Drag to select several</string>
+    <string name="empty_items">No items</string>
+    <string name="empty_albums">No albums</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="selected">Selected</string>
+
+    <!-- Tri et filtres -->
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+    <string name="sort_random">Random</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_size">Size</string>
+    <string name="filter_all">All</string>
+    <string name="filter_photos">Photos</string>
+    <string name="filter_videos">Videos</string>
+    <string name="album_sort_modified">Date modified</string>
+    <string name="album_sort_created">Date created</string>
+    <string name="album_sort_name">Alphabetical</string>
+    <string name="sheet_sort_by">Sort by</string>
+    <string name="sheet_show">Show</string>
+    <string name="sheet_columns">Columns</string>
+    <string name="sheet_sort_albums_by">Sort albums by</string>
+    <string name="sheet_sort_albums_hint">Tap the active sort again to reverse the order</string>
+
+    <!-- Visionneuse -->
+    <string name="details">Details</string>
+    <string name="info_name">Name</string>
+    <string name="info_date">Date</string>
+    <string name="info_folder">Folder</string>
+    <string name="info_resolution">Resolution</string>
+    <string name="info_size">Size</string>
+    <string name="info_duration">Duration</string>
+    <string name="info_type">Type</string>
+    <string name="sound_on">Turn sound on</string>
+    <string name="sound_off">Mute</string>
+
+    <!-- Sélection, déplacement, suppression -->
+    <plurals name="trash_title">
+        <item quantity="one">Move to trash?</item>
+        <item quantity="other">Move %d items to trash?</item>
+    </plurals>
+    <string name="trash_text">They can be recovered for 30 days before being permanently deleted.</string>
+    <plurals name="move_title">
+        <item quantity="one">Move %d item to…</item>
+        <item quantity="other">Move %d items to…</item>
+    </plurals>
+    <plurals name="moved_to">
+        <item quantity="one">%1$d item moved to %2$s</item>
+        <item quantity="other">%1$d items moved to %2$s</item>
+    </plurals>
+    <plurals name="move_failed">
+        <item quantity="one">%d could not be moved</item>
+        <item quantity="other">%d could not be moved</item>
+    </plurals>
+    <string name="folder_audio_only">Folder reserved for audio</string>
+    <string name="folder_no_photos">Photos are not allowed here</string>
+    <string name="new_folder">New folder</string>
+    <string name="folder_name">Name</string>
+    <string name="created_in_pictures">Created in Pictures/</string>
+    <string name="move_here">Move here</string>
+
+    <!-- Éditeurs -->
+    <string name="edit_photo_title">Edit photo</string>
+    <string name="edit_video_title">Edit video</string>
+    <string name="tool_left">Left</string>
+    <string name="tool_right">Right</string>
+    <string name="tool_mirror">Mirror</string>
+    <string name="tool_reset">Reset</string>
+    <string name="tool_trim">Trim</string>
+    <string name="tool_crop">Crop</string>
+    <string name="tool_rotate">Rotate</string>
+    <string name="play">Play</string>
+    <string name="aspect_free">Free</string>
+    <string name="aspect_original">Original</string>
+
+    <!-- Enregistrement -->
+    <string name="save_title">Save</string>
+    <string name="save_replace">Replace original</string>
+    <string name="save_replace_desc">The original file will be overwritten</string>
+    <string name="save_replace_convert_desc">Converted to %1$s, the original will be deleted</string>
+    <string name="save_copy">Save a copy</string>
+    <string name="save_copy_desc">The original is kept</string>
+    <string name="save_remember">Remember this choice</string>
+    <string name="save_remember_hint">Can be changed later in Settings</string>
+    <string name="saving">Saving…</string>
+    <string name="save_failed">Save failed</string>
+    <string name="saved_replaced">Original replaced</string>
+    <string name="saved_copy">Copy saved</string>
+    <string name="save_button_ask">Save</string>
+    <string name="save_button_replace">Replace</string>
+    <string name="save_button_copy">Save copy</string>
+    <string name="save_mode_ask">Ask</string>
+    <string name="save_mode_replace">Replace</string>
+    <string name="save_mode_copy">Copy</string>
+    <string name="percent">%1$d%%</string>
+    <string name="error_create_file">Could not create the file</string>
+    <string name="error_video_export">Video export failed (%1$s)</string>
+
+    <!-- Réglages -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="dynamic_color">Wallpaper colors</string>
+    <string name="dynamic_color_desc">Match the colors to your wallpaper</string>
+    <string name="pure_black">Pure black</string>
+    <string name="pure_black_desc">Black background in dark theme, ideal for OLED screens</string>
+    <string name="settings_startup">Startup</string>
+    <string name="start_photos">Open on Photos</string>
+    <string name="start_albums">Open on Albums</string>
+    <string name="settings_videos">Videos</string>
+    <string name="autoplay">Autoplay</string>
+    <string name="autoplay_desc">Start the video as soon as it opens</string>
+    <string name="always_muted">Always muted</string>
+    <string name="always_muted_desc">Turn sound on with the 🔊 button</string>
+    <string name="loop">Loop playback</string>
+    <string name="settings_editing">Editing</string>
+    <string name="save_button_setting">Save button</string>
+    <string name="save_for_photos">Photos</string>
+    <string name="save_for_videos">Videos</string>
+    <string name="photo_quality">Photo quality</string>
+    <string name="photo_quality_desc">Higher quality means larger files. 90–95% is a good balance.</string>
+    <string name="keep_location">Keep location</string>
+    <string name="keep_location_desc">Keep GPS coordinates in edited photos</string>
+    <string name="settings_deletion">Deletion</string>
+    <string name="confirm_delete">Ask for confirmation</string>
+    <string name="confirm_delete_desc">Before moving to trash</string>
+    <string name="settings_media_management">Media management</string>
+    <string name="media_management_desc">Replace, move and delete without Android asking for confirmation every time.</string>
+    <string name="allowed">Allowed</string>
+</resources>

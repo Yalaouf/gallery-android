@@ -1,0 +1,31 @@
+Une galerie rapide et privée pour vos photos et vidéos, avec les outils de retouche dont vous avez vraiment besoin.
+
+<b>Parcourir</b>
+<ul>
+<li><b>Photos</b> : tout est regroupé par jour. Triez par date, nom, taille ou au hasard, affichez seulement les photos ou les vidéos, choisissez de 2 à 6 colonnes.</li>
+<li><b>Albums</b> : vos dossiers, triés par date de modification, date de création ou nom.</li>
+<li>Visionneuse plein écran avec zoom (pincer ou double-tap) et lecteur vidéo.</li>
+</ul>
+
+<b>Organiser</b>
+<ul>
+<li>Appui long puis glissement pour sélectionner beaucoup d'éléments d'un coup. La grille défile toute seule quand on atteint le bord.</li>
+<li>Sélectionnez une journée entière, ou tout, en un geste.</li>
+<li>Déplacez vers un autre dossier ou un nouveau, partagez, ou mettez à la corbeille.</li>
+</ul>
+
+<b>Retoucher</b>
+<ul>
+<li>Photos : recadrage (libre ou format fixe), rotation, miroir. Les informations de la photo (date, appareil, position) sont conservées.</li>
+<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir.</li>
+<li>Enregistrez une copie ou remplacez l'original. Choisissez à chaque fois, ou définissez un choix par défaut, séparément pour les photos et les vidéos.</li>
+</ul>
+
+<b>Privée par conception</b>
+<ul>
+<li>Aucune permission internet : rien ne quitte votre téléphone.</li>
+<li>Pas de publicité, pas de traceur, pas de statistiques.</li>
+<li>Permission facultative « gestion des médias » (Android 12+) pour modifier, déplacer et supprimer sans confirmation à chaque fois.</li>
+</ul>
+
+Design Material You avec thèmes clair, sombre et noir pur. Disponible en français et en anglais.

@@ -1,0 +1,31 @@
+A fast, private gallery for your photos and videos, with the editing tools you actually need.
+
+<b>Browse</b>
+<ul>
+<li><b>Photos</b>: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns.</li>
+<li><b>Albums</b>: your folders, sorted by date modified, date created or name.</li>
+<li>Full-screen viewer with pinch and double-tap zoom, and a video player.</li>
+</ul>
+
+<b>Organize</b>
+<ul>
+<li>Long-press then drag to select many items at once. The grid scrolls by itself when you reach the edge.</li>
+<li>Select a whole day, or everything, in one tap.</li>
+<li>Move items to another folder or to a new one, share them, or send them to the trash.</li>
+</ul>
+
+<b>Edit</b>
+<ul>
+<li>Photos: crop (free or fixed ratio), rotate, mirror. Photo details (date, camera, location) are kept.</li>
+<li>Videos: trim with a live preview, crop, rotate, mirror.</li>
+<li>Save as a copy or replace the original. Choose each time, or set a default, separately for photos and videos.</li>
+</ul>
+
+<b>Private by design</b>
+<ul>
+<li>No internet permission: nothing ever leaves your phone.</li>
+<li>No ads, no trackers, no analytics.</li>
+<li>Optional "media management" permission (Android 12+) to edit, move and delete without a confirmation every time.</li>
+</ul>
+
+Material You design with light, dark and pure-black themes. Available in English and French.

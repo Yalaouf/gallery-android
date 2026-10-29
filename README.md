@@ -2,6 +2,10 @@
 
 A fast, private photo & video gallery for Android. No ads, no trackers, no internet access.
 
+> [!NOTE]
+> This app was fully vibecoded at the very beginning: the initial version was written entirely
+> by an AI coding assistant (Claude Code), from my descriptions of what I wanted.
+
 <p>
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="Photos">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="Albums">

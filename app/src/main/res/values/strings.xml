@@ -212,4 +212,5 @@
     </plurals>
     <string name="show_trash">Show the trash</string>
     <string name="show_trash_desc">As a folder in the Albums tab</string>
+    <string name="gif_open_failed">This GIF can\'t be opened</string>
 </resources>

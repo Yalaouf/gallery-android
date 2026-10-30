@@ -44,6 +44,7 @@ import com.mephilia.gallery.ui.components.FullCrop
 import com.mephilia.gallery.ui.components.aspectPresets
 import com.mephilia.gallery.ui.components.centeredCrop
 import com.mephilia.gallery.ui.components.rotatedBy
+import android.widget.Toast
 
 private val SPEEDS = listOf(0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 3f, 4f)
 
@@ -52,6 +53,10 @@ fun GifEditorScreen(item: MediaItem, onClose: () -> Unit) {
     val context = LocalContext.current
     val info by produceState<GifInfo?>(null, item.uri) {
         value = runCatching { readGifInfo(context, item.uri) }.getOrNull()
+        if (value == null) {
+            Toast.makeText(context, R.string.gif_open_failed, Toast.LENGTH_LONG).show()
+            onClose()
+        }
     }
     var edits by remember { mutableStateOf(PhotoEdits()) }
     var speed by remember { mutableFloatStateOf(1f) }

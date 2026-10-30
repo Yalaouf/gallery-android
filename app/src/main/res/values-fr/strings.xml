@@ -221,4 +221,5 @@
     </plurals>
     <string name="show_trash">Afficher la corbeille</string>
     <string name="show_trash_desc">Comme un dossier dans l\'onglet Albums</string>
+    <string name="gif_open_failed">Impossible d\'ouvrir ce GIF</string>
 </resources>

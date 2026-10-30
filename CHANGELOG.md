@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   waiting for Android's change notification. A replaced photo fades from the old to the new version
   with no black frame or second reload, and deleted items vanish without a fade-out.
 
+### Security
+- "Edit with", "Open with" and "Share to" now only accept `content://` files. A `file://` path sent by another app
+  could point into Gallery's private storage, and saving or sharing it would have leaked those files.
+- The GIF decoder refuses images declaring an absurd size (over 50 megapixels) instead of running out of memory,
+  and the GIF editor closes with a message when a GIF can't be opened.
+- Release workflow: third-party actions pinned to exact commits, the GitHub token no longer kept on disk during
+  the build, and the decoded signing key deleted at the end of every run.
+
 ## [1.2] — 2026-10-30
 
 ### Added

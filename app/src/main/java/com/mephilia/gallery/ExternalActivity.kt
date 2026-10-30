@@ -29,6 +29,7 @@ import com.mephilia.gallery.ui.editor.PhotoEditorScreen
 import com.mephilia.gallery.ui.editor.VideoEditorScreen
 import com.mephilia.gallery.ui.screens.ViewerScreen
 import com.mephilia.gallery.ui.theme.GalleryTheme
+import android.content.ContentResolver
 
 /**
  * Entry point for other apps: "Edit with" (ACTION_EDIT), "Open with" (ACTION_VIEW), and
@@ -43,7 +44,9 @@ class ExternalActivity : ComponentActivity() {
         requestHighestRefreshRate()
         val shared = intent.action == Intent.ACTION_SEND
         val uri = if (shared) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else intent.data
-        if (uri == null) {
+        // Only content:// URIs, which is what apps share. A file:// URI could point into this app's
+        // private storage, and saving or sharing it would leak those files.
+        if (uri == null || uri.scheme != ContentResolver.SCHEME_CONTENT) {
             finish()
             return
         }

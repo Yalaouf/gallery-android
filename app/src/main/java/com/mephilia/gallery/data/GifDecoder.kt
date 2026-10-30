@@ -39,6 +39,8 @@ class GifDecoder(private val data: ByteArray) {
         u8()
         if (packed and 0x80 != 0) globalPalette = readPalette(2 shl (packed and 7))
         require(width > 0 && height > 0) { "Invalid GIF size" }
+        // The size comes from the file: refuse absurd values instead of running out of memory
+        require(width.toLong() * height <= MAX_PIXELS) { "GIF too large (${width}×$height)" }
         loopCount = scanLoopCount()
     }
 
@@ -282,6 +284,10 @@ class GifDecoder(private val data: ByteArray) {
             if (size == 0) return
             pos += size
         }
+    }
+
+    private companion object {
+        const val MAX_PIXELS = 50_000_000L
     }
 
     private fun u8(): Int = if (pos < data.size) data[pos++].toInt() and 0xFF else 0

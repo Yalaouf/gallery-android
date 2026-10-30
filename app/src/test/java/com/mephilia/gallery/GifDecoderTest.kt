@@ -108,4 +108,15 @@ class GifDecoderTest {
         GifEncoder(bytes, 8, 8).use { it.addFrame(IntArray(64), 10) }
         GifDecoder(bytes.toByteArray()).forEachFrame { f -> assertTrue(f.argb.all { (it ushr 24) == 0 }) }
     }
+
+    /** A header declaring a huge size must be refused, not allocated. */
+    @Test
+    fun refusesAbsurdSize() {
+        val header = byteArrayOf(
+            'G'.code.toByte(), 'I'.code.toByte(), 'F'.code.toByte(), '8'.code.toByte(), '9'.code.toByte(), 'a'.code.toByte(),
+            0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0, 0, 0, 0x3B,
+        )
+        val error = runCatching { GifDecoder(header) }.exceptionOrNull()
+        assertTrue("expected IllegalArgumentException, got $error", error is IllegalArgumentException)
+    }
 }

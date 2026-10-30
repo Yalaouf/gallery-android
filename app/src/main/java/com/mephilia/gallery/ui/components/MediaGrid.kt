@@ -68,7 +68,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import android.text.format.DateFormat
 
 private sealed interface GridEntry {
-    /** [ids] = éléments du jour, pour tout sélectionner d'un coup depuis l'en-tête. */
+    /** [ids]: the day's items, so the header can select them all. */
     class Header(val label: String, val key: String, val ids: List<Long>) : GridEntry
     data class Cell(val item: MediaItem) : GridEntry
 }
@@ -94,11 +94,10 @@ fun MediaGrid(
     val selected = selection?.ids.orEmpty()
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
-    // Zones de défilement automatique : celle du bas couvre aussi la barre d'actions flottante
+    // The bottom auto-scroll zone also covers the floating action bar
     val topEdge = with(density) { 96.dp.toPx() }
     val bottomEdge = with(density) { 160.dp.toPx() }
     val maxSpeed = with(density) { 14.dp.toPx() }
-    // Défilement automatique quand le doigt approche du haut ou du bas pendant un glissement
     var autoScroll by remember { mutableFloatStateOf(0f) }
     val lastPointer = remember { arrayOf(Offset.Unspecified) }
 
@@ -115,7 +114,7 @@ fun MediaGrid(
     LaunchedEffect(autoScroll != 0f) {
         val startNanos = withFrameNanos { it }
         while (autoScroll != 0f) {
-            // Accélère tant qu'on reste dans la zone (jusqu'à ×3 après 1,5 s) pour parcourir de longues listes
+            // Speeds up while held in the zone (up to 3× after 1.5 s) to get through long lists
             val held = (withFrameNanos { it } - startNanos) / 1_000_000_000f
             state.scrollBy(autoScroll * (1f + (held / 0.75f).coerceAtMost(2f)))
             if (lastPointer[0] != Offset.Unspecified) itemAt(lastPointer[0])?.let { selection?.updateDrag(it) }
@@ -125,7 +124,7 @@ fun MediaGrid(
     val dragModifier = if (selection == null) Modifier else Modifier.pointerInput(items) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            // Attend un appui long sans mouvement ; sinon on laisse défiler / cliquer normalement
+            // Wait for a still long press; otherwise let the grid scroll and items be clicked normally
             val cancelled = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
                 while (true) {
                     val ev = awaitPointerEvent(PointerEventPass.Initial)
@@ -146,13 +145,12 @@ fun MediaGrid(
                 while (true) {
                     val ev = awaitPointerEvent(PointerEventPass.Initial)
                     val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                    // On consomme tout : ni clic sur la vignette, ni défilement manuel pendant la sélection
+                    // Consume everything: no item click and no manual scroll while drag-selecting
                     ev.changes.forEach { it.consume() }
                     if (!ch.pressed) break
                     lastPointer[0] = ch.position
                     itemAt(ch.position)?.let(selection::updateDrag)
                     val h = size.height
-                    // Vitesse minimale dès l'entrée dans la zone, maximale au bord (ou au-delà)
                     autoScroll = when {
                         ch.position.y < topEdge ->
                             -maxSpeed * (0.3f + 0.7f * (1f - (ch.position.y / topEdge).coerceIn(0f, 1f)))
@@ -212,7 +210,7 @@ fun MediaThumbnail(
     onClick: () -> Unit,
 ) {
     val inset by animateFloatAsState(if (isSelected) 0.86f else 1f, label = "inset")
-    // L'appui long (et le glissement) est géré par la grille, voir MediaGrid
+    // Long press and drag selection are handled by MediaGrid
     Box(
         modifier
             .aspectRatio(1f)
@@ -236,7 +234,7 @@ fun MediaThumbnail(
     }
 }
 
-/** En-tête de jour ; en mode sélection, le toucher (dé)sélectionne toute la journée. */
+/** In selection mode, tapping a day header toggles the whole day. */
 @Composable
 private fun DayHeader(
     label: String,
@@ -275,7 +273,6 @@ private fun SelectionMark(isSelected: Boolean, modifier: Modifier = Modifier, on
         Box(
             modifier
                 .size(22.dp)
-                // Sur une photo : cercle blanc ; sur le fond de l'app : couleur du thème
                 .border(2.dp, if (onPhoto) Color.White else MaterialTheme.colorScheme.outline, CircleShape)
                 .background(if (onPhoto) Color.Black.copy(alpha = 0.2f) else Color.Transparent, CircleShape),
         )
@@ -318,7 +315,6 @@ private fun buildEntries(
     if (!groupByDate) return items.map { GridEntry.Cell(it) }
     val zone = ZoneId.systemDefault()
     val today = LocalDate.now(zone)
-    // Formats de date dans la langue du téléphone (ordre jour/mois adapté à chaque langue)
     val dayFormat = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMM"), locale)
     val dayYearFormat = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEEdMMMMyyyy"), locale)
     val out = ArrayList<GridEntry>(items.size + 64)

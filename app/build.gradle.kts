@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// Réglages locaux (non versionnés) : local.properties à la racine du projet
 val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
@@ -18,20 +17,19 @@ android {
 
     defaultConfig {
         applicationId = "com.mephilia.gallery"
-        // Android 11+ : MediaStore.createWriteRequest / createDeleteRequest pour modifier les originaux
+        // Android 11+ for MediaStore.createWriteRequest / createDeleteRequest
         minSdk = 30
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            // Par défaut, l'APK release n'est pas signé (F-Droid le signe lui-même).
-            // Pour l'installer directement sur son téléphone, ajouter dans local.properties :
-            //   signReleaseWithDebugKey=true
+            // Unsigned by default, as F-Droid signs it. To install it directly on a phone,
+            // add signReleaseWithDebugKey=true to local.properties.
             if (localProps.getProperty("signReleaseWithDebugKey") == "true") {
                 signingConfig = signingConfigs.getByName("debug")
             }
@@ -48,11 +46,11 @@ android {
     buildFeatures {
         compose = true
     }
-    // Liste des langues pour le choix de langue par application (Android 13+)
+    // Per-app language list (Android 13+)
     androidResources {
         generateLocaleConfig = true
     }
-    // Pas de bloc de métadonnées de dépendances (chiffré pour Google) dans l'APK/AAB
+    // No dependency metadata block (encrypted for Google) in the APK/AAB
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
@@ -77,6 +75,7 @@ dependencies {
     implementation(libs.androidx.media3.effect)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

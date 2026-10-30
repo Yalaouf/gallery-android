@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
+import android.provider.MediaStore
 
 private sealed interface Phase {
     data object Idle : Phase
@@ -56,10 +57,10 @@ private sealed interface Phase {
 }
 
 /**
- * Gère la sauvegarde d'une édition : choix "remplacer l'original" / "enregistrer une copie",
- * demande d'autorisation système, génération du fichier et écriture dans MediaStore.
+ * Saves an edit: replace-or-copy choice (or the saved default), permission request,
+ * rendering and writing to MediaStore.
  *
- * @param produce génère le fichier édité (temporaire) en rapportant la progression (0..1).
+ * @param produce renders the edited file to a temporary file, reporting progress (0..1).
  */
 @Composable
 fun SaveFlow(
@@ -79,7 +80,9 @@ fun SaveFlow(
     var phase by remember { mutableStateOf<Phase>(Phase.Idle) }
     var rememberChoice by remember { mutableStateOf(false) }
 
-    // Le format de sortie est-il compatible avec le fichier d'origine ?
+    // Only MediaStore files can be replaced; a file shared by another app can only be copied
+    val canReplace = item.uri.authority == MediaStore.AUTHORITY
+
     val sameFormat = normalizeMime(item.mimeType) == normalizeMime(outputMime)
 
     fun finish(message: String) {
@@ -97,7 +100,6 @@ fun SaveFlow(
                 phase = Phase.Working(null)
                 block(temp)
             } catch (_: AccessDeniedException) {
-                // Refus de la demande d'Android : on revient simplement à l'éditeur
                 phase = Phase.Idle
                 onCancel()
             } catch (e: CancellationException) {
@@ -115,7 +117,7 @@ fun SaveFlow(
             access.write(listOf(item.uri)) { writer.overwrite(item.uri, temp) }
             finish(context.getString(R.string.saved_replaced))
         } else {
-            // Format non réencodable (ex. HEIC) : on crée le nouveau fichier puis on supprime l'original
+            // Format we can't re-encode (e.g. HEIC): write a new file, then delete the original
             val name = item.name.substringBeforeLast('.', item.name) + ".$outputExtension"
             writer.insertCopy(item, temp, name, outputMime)
             finish(context.getString(if (access.delete(listOf(item.uri))) R.string.saved_replaced else R.string.saved_copy))
@@ -127,7 +129,6 @@ fun SaveFlow(
         finish(context.getString(R.string.saved_copy))
     }
 
-    // Selon le réglage : on demande, ou on applique directement le choix enregistré
     LaunchedEffect(active) {
         if (!active) {
             phase = Phase.Idle
@@ -135,14 +136,14 @@ fun SaveFlow(
         }
         if (phase != Phase.Idle) return@LaunchedEffect
         when (AppSettings.saveModeFor(item.isVideo)) {
-            SaveMode.Ask -> phase = Phase.Choosing
-            SaveMode.Replace -> replace()
+            SaveMode.Ask -> if (canReplace) phase = Phase.Choosing else copy()
+            SaveMode.Replace -> if (canReplace) replace() else copy()
             SaveMode.Copy -> copy()
         }
     }
 
     fun choose(mode: SaveMode) {
-        // Le choix retenu ne concerne que ce type de média (photo ou vidéo)
+        // The remembered choice only applies to this media type (photo or video)
         if (rememberChoice) AppSettings.setSaveModeFor(item.isVideo, mode)
         if (mode == SaveMode.Replace) replace() else copy()
     }

@@ -73,6 +73,8 @@ import com.mephilia.gallery.ui.components.rotatedBy
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Rect
 import kotlin.math.roundToInt
+import android.widget.Toast
+import androidx.compose.material.icons.rounded.GifBox
 
 private enum class VideoTool { Trim, Crop, Rotate }
 
@@ -110,16 +112,15 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     var endMs by remember { mutableLongStateOf(0L) }
     var position by remember { mutableLongStateOf(0L) }
     var crop by remember { mutableStateOf(FullCrop) }
-    /** Quarts de tour dans le sens horaire, et miroir horizontal appliqué après la rotation. */
+    /** Clockwise quarter turns; the mirror is applied after the rotation. */
     var quarterTurns by remember { mutableIntStateOf(0) }
     var flipH by remember { mutableStateOf(false) }
-    /** Position de la poignée en cours de déplacement, null hors glissement. */
     var scrubMs by remember { mutableStateOf<Long?>(null) }
     var presetIndex by remember { mutableStateOf(0) }
     var saving by remember { mutableStateOf(false) }
+    var exportingGif by remember { mutableStateOf(false) }
     LaunchedEffect(info) { info?.let { endMs = it.durationMs } }
 
-    // Lecture en boucle à l'intérieur de la sélection
     val range by rememberUpdatedState(startMs to endMs)
     LaunchedEffect(player) {
         while (true) {
@@ -131,7 +132,6 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     }
 
     val sourceRatio = info?.ratio ?: 16f / 9f
-    // Ratio affiché, une fois la rotation appliquée
     val ratio = if (quarterTurns.mod(2) == 1) 1f / sourceRatio else sourceRatio
     val freeLabel = stringResource(R.string.aspect_free)
     val originalLabel = stringResource(R.string.aspect_original)
@@ -143,8 +143,7 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
 
     fun rotate(delta: Int) {
         quarterTurns += delta
-        // Le recadrage tourne avec la vidéo au lieu d'être perdu
-        // (avec le miroir, la rotation apparaît inversée à l'écran, d'où le sens opposé)
+        // The crop turns with the video; when mirrored, the rotation looks reversed on screen
         crop = crop.rotatedBy(if (flipH) -delta else delta)
         presetIndex = 0
     }
@@ -158,15 +157,37 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
             saving = true
         },
         saveEnabled = info != null && edited && !saving,
+        actions = {
+            IconButton(
+                enabled = info != null && !saving,
+                onClick = {
+                    player.pause()
+                    val selection = endMs - startMs
+                    if (selection > GIF_MAX_DURATION_MS) {
+                        Toast.makeText(
+                            context,
+                            context.getString(
+                                R.string.gif_too_long,
+                                formatDuration(GIF_MAX_DURATION_MS),
+                                formatDuration(selection),
+                            ),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    } else {
+                        exportingGif = true
+                    }
+                },
+            ) { Icon(Icons.Rounded.GifBox, stringResource(R.string.gif_button), tint = Color.White) }
+        },
         preview = {
             if (info == null) {
                 CircularProgressIndicator()
             } else {
-                // Hors de l'outil Recadrer, l'aperçu montre le résultat recadré (ce qui sera enregistré)
+                // Outside the crop tool, the preview shows the cropped result
                 val showCropped = tool != VideoTool.Crop
                 FitBox(if (showCropped) ratio * crop.width / crop.height else ratio) {
                     CroppedTo(if (showCropped) crop else FullCrop) {
-                        // TextureView (contrairement à SurfaceView) peut être pivotée et retournée à l'affichage
+                        // Unlike SurfaceView, TextureView can be rotated and mirrored when drawn
                         Transformed(quarterTurns, flipH) {
                             AndroidView(
                                 factory = { ctx -> TextureView(ctx).also { player.setVideoTextureView(it) } },
@@ -250,7 +271,7 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                     positionMs = position,
                     frames = frames,
                     onChangeStarted = { movedStart ->
-                        // Mode "scrubbing" : Media3 privilégie l'affichage rapide des images pendant les seeks répétés
+                        // Scrubbing mode makes Media3 favor fast frame display during repeated seeks
                         player.pause()
                         player.setScrubbingModeEnabled(true)
                         scrubMs = if (movedStart) startMs else endMs
@@ -263,7 +284,7 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                         player.seekTo(scrubMs!!)
                     },
                     onChangeFinished = {
-                        // On reste sur l'image de la poignée relâchée pour pouvoir la vérifier
+                        // Stay on the released handle's frame so it can be checked
                         player.setScrubbingModeEnabled(false)
                         scrubMs = null
                     },
@@ -306,6 +327,17 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
         },
     )
 
+    if (exportingGif && info != null) {
+        GifExportFlow(
+            item = item,
+            info = info!!,
+            startMs = startMs,
+            endMs = endMs,
+            edits = PhotoEdits(quarterTurns, flipH, crop),
+            onDismiss = { exportingGif = false },
+        )
+    }
+
     SaveFlow(
         item = item,
         active = saving,
@@ -325,7 +357,7 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     )
 }
 
-/** N'affiche que la zone [crop] (normalisée) de [content], agrandie pour remplir l'espace. */
+/** Shows only the [crop] area of [content], scaled up to fill the space. */
 @Composable
 private fun CroppedTo(crop: Rect, content: @Composable () -> Unit) {
     Layout(content, Modifier.fillMaxSize().clipToBounds()) { measurables, constraints ->
@@ -341,11 +373,11 @@ private fun CroppedTo(crop: Rect, content: @Composable () -> Unit) {
 }
 
 /**
- * Affiche [content] pivoté de [quarterTurns] quarts de tour (sens horaire) puis retourné horizontalement.
- * Le contenu est mesuré aux dimensions d'origine (largeur/hauteur échangées si besoin).
+ * Draws [content] rotated by [quarterTurns] clockwise, then mirrored.
+ * The content is measured at its unrotated size (width and height swapped when needed).
  */
 @Composable
-private fun Transformed(quarterTurns: Int, flipH: Boolean, content: @Composable () -> Unit) {
+internal fun Transformed(quarterTurns: Int, flipH: Boolean, content: @Composable () -> Unit) {
     val turns = quarterTurns.mod(4)
     Box(Modifier.fillMaxSize().graphicsLayer { scaleX = if (flipH) -1f else 1f }) {
         Layout(content, Modifier.fillMaxSize()) { measurables, constraints ->
@@ -362,7 +394,6 @@ private fun Transformed(quarterTurns: Int, flipH: Boolean, content: @Composable 
     }
 }
 
-/** Temps au dixième de seconde (ex. 1:04.3), pour un positionnement précis. */
 private fun formatPreciseTime(ms: Long) = "%s.%d".format(formatDuration(ms), (ms % 1000) / 100)
 
 private fun togglePlay(player: Player, startMs: Long, endMs: Long) {

@@ -56,9 +56,8 @@ fun PhotoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     var saving by remember { mutableStateOf(false) }
 
     fun rotate(delta: Int) {
-        // Le recadrage tourne avec la photo au lieu d'être perdu ; format repassé en "Libre"
-        // car un format imposé (ex. 4:3) ne correspond plus une fois tourné.
-        // Avec le miroir, la rotation apparaît inversée à l'écran, d'où le sens opposé
+        // The crop turns with the photo; the ratio resets to free since a fixed one no longer fits.
+        // When mirrored, the rotation looks reversed on screen, hence the opposite direction.
         edits = edits.copy(quarterTurns = edits.quarterTurns + delta, crop = edits.crop.rotatedBy(if (edits.flipH) -delta else delta))
         presetIndex = 0
     }

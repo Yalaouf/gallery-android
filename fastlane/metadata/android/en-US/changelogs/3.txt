@@ -1,0 +1,6 @@
+New in 1.2:
+• Export videos as animated GIFs (up to 15 s), at the same speed as the video
+• Edit GIFs: crop, rotate, mirror, speed and loop
+• Animated GIFs play in the viewer
+• Search and sort folders when moving files
+• Open and edit images from other apps (Edit with / Share)

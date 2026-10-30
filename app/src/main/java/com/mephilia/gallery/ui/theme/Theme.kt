@@ -82,7 +82,6 @@ fun GalleryTheme(content: @Composable () -> Unit) {
         darkTheme -> DarkColors
         else -> LightColors
     }
-    // Noir pur : économise la batterie sur les écrans OLED
     val colors = if (darkTheme && settings.pureBlack) base.copy(
         background = Color.Black,
         surface = Color.Black,

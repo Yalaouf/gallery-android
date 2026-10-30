@@ -102,7 +102,7 @@ fun HomeScreen(
     onOpenAlbum: (Album) -> Unit,
 ) {
     SystemBars(lightIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f)
-    // Conserve l'état (scroll…) de chaque onglet quand on passe de l'un à l'autre
+    // Keeps each tab's state (scroll position…) when switching tabs
     val tabStates = rememberSaveableStateHolder()
     var selecting by remember { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -120,7 +120,6 @@ fun HomeScreen(
                 else -> AlbumsTab(vm, onOpenAlbum, onOpenSettings = { showSettings = true })
             }
         }
-        // Pendant une sélection, la barre d'actions prend la place de la navigation
         AnimatedVisibility(
             visible = !selecting,
             enter = fadeIn() + slideInVertically { it },
@@ -138,7 +137,6 @@ fun HomeScreen(
     }
 }
 
-/** Espace laissé sous les grilles pour la barre de navigation flottante. */
 @Composable
 private fun bottomPadding() = PaddingValues(bottom = 104.dp)
 
@@ -169,7 +167,7 @@ private fun PhotosTab(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            // Même barre (même hauteur) en sélection, pour que la grille ne saute pas sous le doigt
+            // Same bar (same height) in selection mode, so the grid doesn't jump under the finger
             LargeTopAppBar(
                 navigationIcon = {
                     if (selection.active) {

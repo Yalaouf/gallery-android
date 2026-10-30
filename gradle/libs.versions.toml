@@ -33,6 +33,7 @@ androidx-media3-transformer = { group = "androidx.media3", name = "media3-transf
 androidx-media3-effect = { group = "androidx.media3", name = "media3-effect", version.ref = "media3" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -16,27 +16,22 @@ enum class ThemeMode(@StringRes val label: Int) {
 }
 
 data class Settings(
-    // Apparence
     val theme: ThemeMode = ThemeMode.System,
     val dynamicColor: Boolean = true,
     val pureBlack: Boolean = false,
-    // Démarrage : 0 = Photos, 1 = Albums
+    // 0 = Photos, 1 = Albums
     val startTab: Int = 0,
-    // Vidéos
     val autoplayVideos: Boolean = true,
     val alwaysMuted: Boolean = false,
     val loopVideos: Boolean = true,
-    // Édition
-    // Bouton "Enregistrer" : réglable séparément pour les photos et les vidéos
     val saveModePhoto: SaveMode = SaveMode.Ask,
     val saveModeVideo: SaveMode = SaveMode.Ask,
     val jpegQuality: Int = 95,
     val keepLocation: Boolean = true,
-    // Suppression
     val confirmDelete: Boolean = true,
 )
 
-/** Réglages de l'application, partagés par tous les écrans et enregistrés à chaque modification. */
+/** App settings shared by all screens, persisted on every change. */
 object AppSettings {
     private lateinit var sp: SharedPreferences
     private val state = MutableStateFlow(Settings())
@@ -54,7 +49,7 @@ object AppSettings {
             autoplayVideos = sp.getBoolean("autoplay", d.autoplayVideos),
             alwaysMuted = sp.getBoolean("always_muted", d.alwaysMuted),
             loopVideos = sp.getBoolean("loop", d.loopVideos),
-            // L'ancien réglage commun ("save_mode") sert de valeur initiale aux deux nouveaux
+            // The former shared "save_mode" seeds both per-type settings
             saveModePhoto = saveMode(sp.getString("save_mode_photo", null) ?: legacySaveMode(context)) ?: d.saveModePhoto,
             saveModeVideo = saveMode(sp.getString("save_mode_video", null) ?: legacySaveMode(context)) ?: d.saveModeVideo,
             jpegQuality = sp.getInt("jpeg_quality", d.jpegQuality),
@@ -63,7 +58,6 @@ object AppSettings {
         )
     }
 
-    /** Mode d'enregistrement selon le type de média. */
     fun saveModeFor(isVideo: Boolean) = if (isVideo) current.saveModeVideo else current.saveModePhoto
 
     fun setSaveModeFor(isVideo: Boolean, mode: SaveMode) = update {

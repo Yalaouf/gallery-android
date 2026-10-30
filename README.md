@@ -17,13 +17,17 @@ A fast, private photo & video gallery for Android. No ads, no trackers, no inter
 - **Photos** view grouped by day — sort by date, name, size or randomly; filter photos/videos; 2 to 6 columns
 - **Albums** view — sort folders by date modified, date created or name
 - **Selection** — long-press and drag to select many items, with auto-scroll; select a whole day or everything
-- **Move** items between folders (or into a new one), **share**, **delete** (to trash)
+- **Move** items between folders (or into a new one) with folder search, **share**, **delete** (to trash)
 - **Photo editor** — crop (free or fixed ratio), rotate, mirror
-- **Video editor** — trim with a live preview, crop, rotate, mirror
+- **GIF editor** — crop, rotate, mirror, change speed, turn looping on or off; GIFs play animated in the viewer
+- **Video editor** — trim with a live preview, crop, rotate, mirror, and export short clips (up to 15 s) as animated GIFs
 - **Save** as a copy or replace the original — choose each time or set a default, separately for photos and videos
 - Keeps photo EXIF data (date, camera, optionally GPS location)
 - Material You design, light/dark/pure-black themes
+- Opens images and videos from other apps ("Edit with", "Open with", share menu)
 - English and French
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 
 ## Privacy
 

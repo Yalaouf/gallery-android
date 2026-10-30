@@ -15,7 +15,7 @@ import java.io.File
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** Transformations d'une photo : rotation par quarts de tour (sens horaire), miroir, recadrage normalisé. */
+/** Clockwise quarter turns, then horizontal mirror, then a normalized crop in the displayed image. */
 data class PhotoEdits(
     val quarterTurns: Int = 0,
     val flipH: Boolean = false,
@@ -27,7 +27,7 @@ data class OutputFormat(val mime: String, val extension: String, val format: Bit
 fun outputFormatFor(mime: String): OutputFormat = when (mime.lowercase()) {
     "image/png" -> OutputFormat("image/png", "png", Bitmap.CompressFormat.PNG)
     "image/webp" -> OutputFormat("image/webp", "webp", Bitmap.CompressFormat.WEBP_LOSSY)
-    // JPEG, et conversion en JPEG pour les formats non encodables (HEIC, AVIF, GIF…)
+    // Formats Android can't encode (HEIC, AVIF…) are converted to JPEG
     else -> OutputFormat("image/jpeg", "jpg", Bitmap.CompressFormat.JPEG)
 }
 
@@ -53,15 +53,11 @@ private fun editMatrix(edits: PhotoEdits) = Matrix().apply {
     if (edits.flipH) postScale(-1f, 1f)
 }
 
-/** Applique rotation + miroir (pour l'aperçu). */
 fun Bitmap.transformed(edits: PhotoEdits): Bitmap =
     if (edits.quarterTurns.mod(4) == 0 && !edits.flipH) this
     else Bitmap.createBitmap(this, 0, 0, width, height, editMatrix(edits), true)
 
-/**
- * Convertit le recadrage (exprimé dans l'espace affiché, après rotation/miroir)
- * en rectangle dans l'image source.
- */
+/** Maps the crop, expressed in the displayed (rotated and mirrored) image, back to the source image. */
 private fun sourceRect(edits: PhotoEdits): Rect {
     fun toSource(u0: Float, v0: Float): Pair<Float, Float> {
         val u = if (edits.flipH) 1f - u0 else u0
@@ -77,17 +73,21 @@ private fun sourceRect(edits: PhotoEdits): Rect {
     return Rect(minOf(x1, x2), minOf(y1, y2), maxOf(x1, x2), maxOf(y1, y2))
 }
 
-/** Rendu pleine résolution dans un fichier temporaire, EXIF conservés pour le JPEG. */
+fun Bitmap.applyEdits(edits: PhotoEdits): Bitmap {
+    val r = sourceRect(edits)
+    val x = (r.left * width).roundToInt().coerceIn(0, width - 1)
+    val y = (r.top * height).roundToInt().coerceIn(0, height - 1)
+    val w = (r.width * width).roundToInt().coerceIn(1, width - x)
+    val h = (r.height * height).roundToInt().coerceIn(1, height - y)
+    return Bitmap.createBitmap(this, x, y, w, h, editMatrix(edits), true)
+}
+
+/** Full-resolution render. EXIF data is kept for JPEG output. */
 suspend fun renderPhoto(context: Context, item: MediaItem, edits: PhotoEdits, out: File): File =
     withContext(Dispatchers.Default) {
         val format = outputFormatFor(item.mimeType)
         val src = decodeBitmap(context, item.uri)
-        val r = sourceRect(edits)
-        val x = (r.left * src.width).roundToInt().coerceIn(0, src.width - 1)
-        val y = (r.top * src.height).roundToInt().coerceIn(0, src.height - 1)
-        val w = (r.width * src.width).roundToInt().coerceIn(1, src.width - x)
-        val h = (r.height * src.height).roundToInt().coerceIn(1, src.height - y)
-        val result = Bitmap.createBitmap(src, x, y, w, h, editMatrix(edits), true)
+        val result = src.applyEdits(edits)
         if (result !== src) src.recycle()
         withContext(Dispatchers.IO) {
             val settings = AppSettings.current
@@ -122,12 +122,12 @@ private fun copyExif(context: Context, from: Uri, to: File, width: Int, height: 
             if (!keepLocation && tag.startsWith("GPS")) continue
             src.getAttribute(tag)?.let { dst.setAttribute(tag, it) }
         }
-        // La rotation est déjà appliquée aux pixels
+        // The rotation is baked into the pixels
         dst.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
         dst.setAttribute(ExifInterface.TAG_PIXEL_X_DIMENSION, width.toString())
         dst.setAttribute(ExifInterface.TAG_PIXEL_Y_DIMENSION, height.toString())
         dst.saveAttributes()
     } catch (_: Exception) {
-        // Les EXIF sont un bonus : on n'échoue pas la sauvegarde pour autant
+        // EXIF is best effort: don't fail the save over it
     }
 }

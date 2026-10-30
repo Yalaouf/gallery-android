@@ -91,6 +91,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
+import kotlinx.coroutines.flow.flowOf
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,10 +101,14 @@ fun ViewerScreen(
     startId: Long,
     onBack: () -> Unit,
     onEdit: (MediaItem) -> Unit,
+    /** Shown instead of the gallery, e.g. a file opened from another app. */
+    items: List<MediaItem>? = null,
 ) {
-    val source: Flow<List<MediaItem>> = remember(bucketId) { bucketId?.let { vm.albumMedia(it) } ?: vm.media }
-    val items by source.collectAsStateWithLifecycle(initialValue = null)
-    val list = items ?: return Box(Modifier.fillMaxSize().background(Color.Black))
+    val source: Flow<List<MediaItem>> = remember(bucketId, items) {
+        items?.let { flowOf(it) } ?: bucketId?.let { vm.albumMedia(it) } ?: vm.media
+    }
+    val shown by source.collectAsStateWithLifecycle(initialValue = null)
+    val list = shown ?: return Box(Modifier.fillMaxSize().background(Color.Black))
     if (list.isEmpty()) {
         LaunchedEffect(Unit) { onBack() }
         return
@@ -114,14 +119,14 @@ fun ViewerScreen(
     LaunchedEffect(pager.settledPage, list) {
         list.getOrNull(pager.settledPage)?.let { currentId = it.id }
     }
-    // Si la liste change (édition, suppression), rester sur le même élément si possible
+    // When the list changes (edit, delete), stay on the same item if it still exists
     LaunchedEffect(list) {
         val idx = list.indexOfFirst { it.id == currentId }
         if (idx >= 0 && idx != pager.currentPage) pager.scrollToPage(idx)
     }
 
     var showBars by remember { mutableStateOf(true) }
-    // En écran partagé, les vidéos démarrent sans son pour ne pas couper l'autre application
+    // In split screen, videos start muted so the other app keeps playing
     val multiWindow = isInMultiWindow()
     var muted by remember { mutableStateOf(multiWindow || AppSettings.current.alwaysMuted) }
     LaunchedEffect(multiWindow) { if (multiWindow) muted = true }
@@ -244,7 +249,7 @@ private fun PhotoPage(item: MediaItem, onTap: () -> Unit) {
     val context = LocalContext.current
     val config = LocalConfiguration.current
     val density = LocalDensity.current
-    // Charge à ~2× la taille de l'écran pour garder du détail en zoomant
+    // Load at ~2× the screen size to keep detail when zooming
     val maxPx = with(density) { (maxOf(config.screenWidthDp, config.screenHeightDp).dp.toPx() * 2).toInt() }
         .coerceAtMost(4096)
     var loaded by remember(item.id) { mutableStateOf(false) }
@@ -335,8 +340,8 @@ private fun InfoRow(label: String, value: String) {
 }
 
 /**
- * Apparence des barres système pour l'écran courant : icônes claires ou sombres, barres masquées ou non.
- * Chaque écran déclare la sienne ; l'écran qui entre l'emporte sur celui qui sort.
+ * System bar appearance for the current screen. Each screen declares its own;
+ * during a transition, the entering screen wins over the leaving one.
  */
 @Composable
 fun SystemBars(lightIcons: Boolean, hidden: Boolean = false) {

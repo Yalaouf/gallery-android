@@ -70,6 +70,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.mephilia.gallery.R
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.mephilia.gallery.data.Prefs
+import java.text.Normalizer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,7 +94,6 @@ fun SelectionTopBar(count: Int, onClose: () -> Unit, onSelectAll: () -> Unit) {
     )
 }
 
-/** Barre flottante d'actions sur la sélection : déplacer, partager, supprimer. */
 @Composable
 fun SelectionActionsBar(
     items: List<MediaItem>,
@@ -176,11 +184,18 @@ fun shareMedia(context: Context, items: List<MediaItem>) {
     context.startActivity(Intent.createChooser(intent, null))
 }
 
+/** Lowercase without accents, so "tele" matches "Télé". */
+private fun normalizeForSearch(s: String): String =
+    Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
+
+private fun isValidFolderName(name: String) =
+    name.isNotBlank() && name.none { it in "/\\:*?\"<>|" } && !name.startsWith(".")
+
 private val audioDirs = setOf("Music", "Podcasts", "Ringtones", "Alarms", "Notifications", "Audiobooks", "Recordings")
 
 /**
- * Android n'accepte les photos que dans certains dossiers racine (pas Movies/ ni les dossiers audio),
- * et les vidéos pas dans les dossiers audio. Renvoie la raison du refus, ou null si c'est possible.
+ * MediaStore only accepts images in some top-level folders (not Movies/ nor audio folders), and videos
+ * not in audio folders. Returns the reason a folder is refused, or null if it's allowed.
  */
 @StringRes
 private fun refusalReason(relativePath: String, items: List<MediaItem>): Int? {
@@ -192,9 +207,6 @@ private fun refusalReason(relativePath: String, items: List<MediaItem>): Int? {
     }
 }
 
-/**
- * Choix du dossier de destination puis déplacement (avec la demande d'autorisation système).
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoveFlow(
@@ -207,11 +219,19 @@ fun MoveFlow(
     val scope = rememberCoroutineScope()
     val writer = remember { MediaWriter(context) }
     var newFolder by remember { mutableStateOf(false) }
+    val prefs = remember { Prefs(context) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var sortRecent by remember { mutableStateOf(prefs.moveSortRecent) }
 
-    // On ne propose pas le dossier d'origine si tout vient du même dossier
     val sourcePaths = remember(items) { items.map { it.relativePath }.toSet() }
-    val targets = remember(albums, sourcePaths) {
-        albums.filter { !(sourcePaths.size == 1 && it.relativePath in sourcePaths) }.sortedBy { it.name.lowercase() }
+    val targets = remember(albums, sourcePaths, query, sortRecent) {
+        val q = normalizeForSearch(query.trim())
+        albums
+            .filter { !(sourcePaths.size == 1 && it.relativePath in sourcePaths) }
+            .filter { q.isEmpty() || normalizeForSearch(it.name).contains(q) || normalizeForSearch(it.relativePath).contains(q) }
+            .let { list ->
+                if (sortRecent) list.sortedByDescending { it.lastModified } else list.sortedBy { normalizeForSearch(it.name) }
+            }
     }
 
     val access = rememberMediaAccess()
@@ -237,18 +257,52 @@ fun MoveFlow(
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.navigationBarsPadding()) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        // Fully expanded so the list stays visible above the keyboard while searching
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(Modifier.navigationBarsPadding().imePadding()) {
             Text(
                 pluralStringResource(R.plurals.move_title, items.size, items.size),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
             )
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.search_folders)) },
+                leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                trailingIcon = if (query.isNotEmpty()) ({
+                    IconButton(onClick = { query = "" }) { Icon(Icons.Rounded.Close, stringResource(R.string.action_clear)) }
+                }) else null,
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            )
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                listOf(R.string.sort_alphabetical to false, R.string.sort_recent to true).forEachIndexed { i, (label, recent) ->
+                    SegmentedButton(
+                        selected = sortRecent == recent,
+                        onClick = {
+                            sortRecent = recent
+                            prefs.moveSortRecent = recent
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(i, 2),
+                    ) { Text(stringResource(label)) }
+                }
+            }
             LazyColumn {
                 item {
+                    val createNamed = query.isNotBlank() && targets.isEmpty() && isValidFolderName(query.trim())
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.new_folder)) },
+                        headlineContent = {
+                            Text(
+                                if (createNamed) stringResource(R.string.create_folder_named, query.trim())
+                                else stringResource(R.string.new_folder),
+                            )
+                        },
                         leadingContent = {
                             Box(
                                 Modifier
@@ -260,7 +314,9 @@ fun MoveFlow(
                             }
                         },
                         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                        modifier = Modifier.clickable { newFolder = true },
+                        modifier = Modifier.clickable {
+                            if (createNamed) moveTo("Pictures/${query.trim()}/") else newFolder = true
+                        },
                     )
                 }
                 items(targets, key = { it.id }) { album ->
@@ -289,8 +345,8 @@ fun MoveFlow(
     }
 
     if (newFolder) {
-        var name by remember { mutableStateOf("") }
-        val valid = name.isNotBlank() && name.none { it in "/\\:*?\"<>|" } && !name.startsWith(".")
+        var name by remember { mutableStateOf(query.trim()) }
+        val valid = isValidFolderName(name)
         AlertDialog(
             onDismissRequest = { newFolder = false },
             icon = { Icon(Icons.Rounded.CreateNewFolder, null) },
@@ -315,7 +371,7 @@ fun MoveFlow(
             confirmButton = {
                 TextButton(enabled = valid, onClick = {
                     newFolder = false
-                    // Pictures/ accepte à la fois les images et les vidéos
+                    // Pictures/ accepts both images and videos
                     moveTo("Pictures/${name.trim()}/")
                 }) { Text(stringResource(R.string.move_here)) }
             },
@@ -325,7 +381,6 @@ fun MoveFlow(
 }
 
 
-/** Sélection multiple d'éléments, avec retour arrière pour l'annuler. */
 class MediaSelection internal constructor(private val state: MutableState<Set<Long>>) {
     val ids: Set<Long> get() = state.value
     val active: Boolean get() = state.value.isNotEmpty()
@@ -339,24 +394,23 @@ class MediaSelection internal constructor(private val state: MutableState<Set<Lo
         state.value = emptySet()
     }
 
-    /** Sélectionne tous [groupIds], ou les désélectionne s'ils l'étaient déjà tous. */
+    /** Selects all [groupIds], or deselects them if they were all selected. */
     fun toggleAll(groupIds: List<Long>) {
         state.value = if (ids.containsAll(groupIds)) ids - groupIds.toSet() else ids + groupIds
     }
     fun items(all: List<MediaItem>) = all.filter { it.id in ids }
 
-    // Sélection par glissement : tout ce qui est entre l'élément de départ et le doigt
     private var dragOrder: List<MediaItem> = emptyList()
     private var dragBase: Set<Long> = emptySet()
     private var dragAnchor = -1
     private var dragAdds = true
 
-    /** Début d'un glissement sur [item] ; [order] = ordre d'affichage des éléments. */
+    /** [order] is the display order, used to select everything between the start item and the finger. */
     fun startDrag(item: MediaItem, order: List<MediaItem>) {
         dragOrder = order
         dragBase = ids
         dragAnchor = order.indexOfFirst { it.id == item.id }
-        // Si on part d'un élément déjà sélectionné, le glissement désélectionne
+        // Starting on a selected item makes the drag deselect
         dragAdds = item.id !in ids
         updateDrag(item)
     }
@@ -379,7 +433,7 @@ class MediaSelection internal constructor(private val state: MutableState<Set<Lo
 fun rememberSelection(items: List<MediaItem>): MediaSelection {
     val state = rememberSaveable { mutableStateOf<Set<Long>>(emptySet()) }
     val selection = remember(state) { MediaSelection(state) }
-    // Oublie les éléments qui ont disparu (déplacés hors de la vue, supprimés…)
+    // Forget items that disappeared (moved out of the view, deleted…)
     LaunchedEffect(items) {
         val present = items.mapTo(HashSet()) { it.id }
         if (!present.containsAll(selection.ids)) state.value = selection.ids.filterTo(HashSet()) { it in present }

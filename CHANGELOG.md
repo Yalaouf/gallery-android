@@ -1,0 +1,50 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
+
+## [1.2] — unreleased
+
+### Added
+- **Export videos as animated GIFs** (up to 15 seconds), using the current trim, crop, rotation and mirror.
+  Choose the size (320, 480 or 640 px), the smoothness (10 or 15 fps) and whether it loops.
+  The GIF plays at the same speed as the video and is saved as a new image next to it.
+- **GIF editor**: crop, rotate and mirror GIFs like photos, change their speed (0.25× to 4×) and turn looping on or off.
+- **Animated GIFs** now play in the viewer.
+- **Search when moving files**: a search bar (ignores case and accents) and an A → Z / Recent sort in the "Move to…" list.
+  When nothing matches, the list offers to create a folder with that name.
+- **Open and edit from other apps**: the app now appears in "Edit with" / "Open with",
+  and as "Edit with Gallery" in the share menu — for example from a screenshot's Share button.
+
+### Changed
+- Saving tries to write directly before asking Android for permission, which avoids a confirmation
+  when the other app (e.g. the screenshot tool) already allowed it.
+- Files are flushed to storage when saved, so a save can't leave an empty file if the phone shuts down right after.
+
+## [1.1] — 2026-10-30
+
+### Changed
+- Trim, crop and rotate can be combined in one editing session:
+  rotating a photo or video keeps the crop instead of resetting it.
+- The video preview shows the cropped result while trimming or rotating.
+- A dot on the video tools shows which edits are active.
+
+## [1.0] — 2026-10-30
+
+### Added
+- Photos view grouped by day, with sorting (date, name, size, random), filtering (photos/videos) and 2–6 columns.
+- Albums view, sorted by date modified, date created or name.
+- Full-screen viewer with zoom and video playback (muted in split screen).
+- Multi-select by long-press and drag, with auto-scroll; select a whole day or everything.
+- Move to another folder or a new one, share, and delete (to trash).
+- Photo editor: crop (free or fixed ratios), rotate, mirror; EXIF data kept.
+- Video editor: trim with live preview, crop, rotate, mirror.
+- Save as a copy or replace the original, set separately for photos and videos.
+- Settings: theme (system/light/dark, pure black, wallpaper colors), start tab, video options,
+  photo quality, keep location, delete confirmation, media management permission.
+- English and French, following the system language.
+- No internet permission, no trackers.
+
+[1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1...HEAD
+[1.1]: https://github.com/Yalaouf/gallery-android/compare/v1.0...v1.1
+[1.0]: https://github.com/Yalaouf/gallery-android/releases/tag/v1.0

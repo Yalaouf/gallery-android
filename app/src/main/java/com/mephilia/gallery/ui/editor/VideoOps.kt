@@ -29,11 +29,11 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-data class VideoInfo(val width: Int, val height: Int, val durationMs: Long) {
+/** [width]/[height] are the displayed size (rotation applied); [rotation] comes from the metadata. */
+data class VideoInfo(val width: Int, val height: Int, val durationMs: Long, val rotation: Int = 0) {
     val ratio get() = if (height > 0) width.toFloat() / height else 16f / 9f
 }
 
-/** Dimensions telles qu'affichées (rotation appliquée) et durée. */
 suspend fun readVideoInfo(context: Context, uri: Uri): VideoInfo = withContext(Dispatchers.IO) {
     MediaMetadataRetriever().use { r ->
         r.setDataSource(context, uri)
@@ -41,11 +41,10 @@ suspend fun readVideoInfo(context: Context, uri: Uri): VideoInfo = withContext(D
         val h = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
         val rot = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
         val d = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0
-        if (rot % 180 != 0) VideoInfo(h, w, d) else VideoInfo(w, h, d)
+        if (rot % 180 != 0) VideoInfo(h, w, d, rot) else VideoInfo(w, h, d, rot)
     }
 }
 
-/** Images régulièrement espacées pour la frise de découpe. */
 suspend fun extractFrames(context: Context, uri: Uri, durationMs: Long, count: Int, height: Int): List<Bitmap> =
     withContext(Dispatchers.IO) {
         MediaMetadataRetriever().use { r ->
@@ -58,8 +57,8 @@ suspend fun extractFrames(context: Context, uri: Uri, durationMs: Long, count: I
     }
 
 /**
- * Exporte la vidéo découpée/recadrée en MP4 avec Media3 Transformer.
- * [quarterTurns] (sens horaire) et [flipH] sont appliqués avant [crop], normalisé (0..1) dans l'espace affiché.
+ * Exports to MP4 with Media3 Transformer. [quarterTurns] (clockwise) and [flipH] are applied
+ * before [crop], which is normalized (0..1) in the displayed image.
  */
 @OptIn(UnstableApi::class)
 suspend fun exportVideo(
@@ -79,13 +78,12 @@ suspend fun exportVideo(
         if (endMs < durationMs) setEndPositionMs(endMs)
     }.build()
     val mediaItem = MediaItem.Builder().setUri(uri).setClippingConfiguration(clipping).build()
-    // Même ordre que pour les photos : rotation, puis miroir, puis recadrage (dans l'espace affiché)
     val videoEffects = buildList<Effect> {
         val turns = quarterTurns.mod(4)
-        // Media3 tourne dans le sens antihoraire
+        // Media3 rotates counterclockwise
         if (turns != 0) add(ScaleAndRotateTransformation.Builder().setRotationDegrees(-90f * turns).build())
         if (flipH) add(ScaleAndRotateTransformation.Builder().setScale(-1f, 1f).build())
-        // Coordonnées normalisées OpenGL : x et y dans [-1, 1], y vers le haut
+        // OpenGL normalized coordinates: x and y in [-1, 1], y pointing up
         if (crop != FullCrop) add(Crop(2 * crop.left - 1, 2 * crop.right - 1, 1 - 2 * crop.bottom, 1 - 2 * crop.top))
     }
     val effects = if (videoEffects.isEmpty()) Effects.EMPTY else Effects(emptyList(), videoEffects)

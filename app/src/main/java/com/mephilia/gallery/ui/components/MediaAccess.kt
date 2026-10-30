@@ -19,13 +19,13 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
-/** L'utilisateur a refusé la demande d'Android. */
-class AccessDeniedException : CancellationException("Accès refusé")
+/** The user declined Android's permission request. */
+class AccessDeniedException : CancellationException("Access denied")
 
 /**
- * Modification des médias d'autres applications.
- * Avec l'autorisation "gestion des médias" (Android 12+), on agit directement, sans confirmation ;
- * sinon (ou si Android refuse quand même), on passe par la demande système habituelle.
+ * Modifies media owned by other apps. Acts directly when allowed (media management permission
+ * on Android 12+, our own files, or a write grant from the calling app), otherwise falls back to
+ * Android's confirmation dialog.
  */
 class MediaAccess internal constructor(private val context: Context) {
     internal var launch: (IntentSenderRequest) -> Unit = {}
@@ -39,26 +39,26 @@ class MediaAccess internal constructor(private val context: Context) {
         launch(IntentSenderRequest.Builder(pi.intentSender).build())
     }
 
-    /** Exécute [block] avec le droit d'écrire sur [uris] ; lève [AccessDeniedException] si refusé. */
+    /**
+     * Runs [block] with write access to [uris], throwing [AccessDeniedException] if the user declines.
+     * [block] is tried directly first and may therefore run twice: it must fail before writing anything.
+     */
     suspend fun write(uris: List<Uri>, block: suspend () -> Unit) {
-        if (canManageMedia) {
-            try {
-                return block()
-            } catch (_: SecurityException) {
-                // On retombe sur la demande système
-            }
+        try {
+            return block()
+        } catch (_: SecurityException) {
         }
         if (!ask(MediaStore.createWriteRequest(context.contentResolver, uris))) throw AccessDeniedException()
         block()
     }
 
-    /** Met à la corbeille ; renvoie false si l'utilisateur refuse. */
+    /** Returns false if the user declines. */
     suspend fun trash(uris: List<Uri>): Boolean {
         if (canManageMedia && direct { uris.forEach { update(it, MediaStore.MediaColumns.IS_TRASHED, 1) } }) return true
         return ask(MediaStore.createTrashRequest(context.contentResolver, uris, true))
     }
 
-    /** Supprime définitivement ; renvoie false si l'utilisateur refuse. */
+    /** Deletes permanently. Returns false if the user declines. */
     suspend fun delete(uris: List<Uri>): Boolean {
         if (canManageMedia && direct { uris.forEach { context.contentResolver.delete(it, null, null) } }) return true
         return ask(MediaStore.createDeleteRequest(context.contentResolver, uris))

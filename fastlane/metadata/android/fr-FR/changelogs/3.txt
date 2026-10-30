@@ -1,0 +1,6 @@
+Nouveautés de la 1.2 :
+• Export des vidéos en GIF animé (jusqu'à 15 s), à la même vitesse que la vidéo
+• Retouche des GIF : recadrage, rotation, miroir, vitesse et boucle
+• Les GIF animés sont lus dans la visionneuse
+• Recherche et tri des dossiers lors d'un déplacement
+• Ouvrir et modifier des images depuis d'autres applications (Modifier avec / Partager)

@@ -8,18 +8,23 @@ import com.mephilia.gallery.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 
-/**
- * Écrit un fichier temporaire édité dans MediaStore : soit par-dessus l'original
- * (nécessite une autorisation obtenue via [MediaStore.createWriteRequest]),
- * soit comme nouvelle copie dans le même dossier.
- */
 class MediaWriter(private val context: Context) {
     private val resolver = context.contentResolver
 
     suspend fun overwrite(target: Uri, source: File) = withContext(Dispatchers.IO) {
-        resolver.openOutputStream(target, "wt")!!.use { out ->
-            source.inputStream().use { it.copyTo(out) }
+        writeSynced(target, source, "wt")
+    }
+
+    /** Syncs to storage so a save can't leave an empty file if the phone shuts down right after. */
+    private fun writeSynced(target: Uri, source: File, mode: String) {
+        resolver.openFileDescriptor(target, mode)!!.use { pfd ->
+            FileOutputStream(pfd.fileDescriptor).use { out ->
+                source.inputStream().use { it.copyTo(out) }
+                out.flush()
+                out.fd.sync()
+            }
         }
     }
 
@@ -29,19 +34,19 @@ class MediaWriter(private val context: Context) {
         displayName: String,
         mimeType: String,
     ): Uri = withContext(Dispatchers.IO) {
-        val collection = if (original.isVideo) {
+        // Based on the output type: a GIF made from a video goes to the images collection
+        val isVideo = mimeType.startsWith("video/")
+        val collection = if (isVideo) {
             MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         } else {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         }
-        val fallbackDir = if (original.isVideo) "Movies/Gallery/" else "Pictures/Gallery/"
+        val fallbackDir = if (isVideo) "Movies/Gallery/" else "Pictures/Gallery/"
         val uri = tryInsert(collection, displayName, mimeType, original.relativePath)
             ?: tryInsert(collection, displayName, mimeType, fallbackDir)
             ?: error(context.getString(R.string.error_create_file))
         try {
-            resolver.openOutputStream(uri)!!.use { out ->
-                source.inputStream().use { it.copyTo(out) }
-            }
+            writeSynced(uri, source, "w")
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
         } catch (e: Exception) {
             resolver.delete(uri, null, null)
@@ -63,9 +68,8 @@ class MediaWriter(private val context: Context) {
         }
 
     /**
-     * Déplace les éléments vers [relativePath] (ex. "Pictures/Vacances/") en changeant leur
-     * chemin dans MediaStore. Nécessite le droit d'écriture (voir MediaAccess) : sans lui,
-     * lève une SecurityException. Le nombre d'échecs est dans [lastMoveFailures].
+     * Moves items to [relativePath] (e.g. "Pictures/Holidays/"). Needs write access (see MediaAccess):
+     * throws SecurityException without it. The number of failed items is in [lastMoveFailures].
      */
     suspend fun move(items: List<MediaItem>, relativePath: String) = withContext(Dispatchers.IO) {
         val values = ContentValues().apply { put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath) }
@@ -75,7 +79,7 @@ class MediaWriter(private val context: Context) {
             } catch (e: SecurityException) {
                 throw e
             } catch (_: Exception) {
-                // Ex. une image vers un dossier non autorisé pour les images (Movies/, Music/…)
+                // e.g. an image into a folder that doesn't accept images (Movies/, Music/…)
                 true
             }
         }

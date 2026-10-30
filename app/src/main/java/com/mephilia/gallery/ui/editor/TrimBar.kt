@@ -34,8 +34,8 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
 /**
- * Frise de découpe : miniatures, zone sélectionnée encadrée, deux poignées et tête de lecture.
- * [onChangeStarted] reçoit la poignée saisie (true = début), [onChange] reçoit (début, fin, poignéeDébutDéplacée).
+ * [onChangeStarted] receives the grabbed handle (true = start);
+ * [onChange] receives (start, end, startHandleMoved).
  */
 @Composable
 fun TrimBar(
@@ -58,13 +58,13 @@ fun TrimBar(
     val started by rememberUpdatedState(onChangeStarted)
     val change by rememberUpdatedState(onChange)
     val finished by rememberUpdatedState(onChangeFinished)
-    val dragging = remember { arrayOf<Boolean?>(null) } // true = début, false = fin
+    val dragging = remember { arrayOf<Boolean?>(null) } // true = start handle, false = end handle
 
     Box(
         modifier
             .fillMaxWidth()
             .height(60.dp)
-            // Les poignées sont près des bords : éviter que le geste "retour" les intercepte
+            // The handles sit near the screen edges: keep the back gesture from stealing them
             .systemGestureExclusion()
             .padding(horizontal = 16.dp),
     ) {
@@ -118,7 +118,6 @@ fun TrimBar(
             val h = size.height - 2 * top
             drawRect(dim, Offset(handleW, top), Size(sx - handleW, h))
             drawRect(dim, Offset(ex, top), Size(size.width - handleW - ex, h))
-            // Cadre de sélection
             drawRoundRect(
                 accent, Offset(sx - handleW, 0f), Size(ex - sx + 2 * handleW, size.height),
                 CornerRadius(10.dp.toPx()), style = Stroke(3.dp.toPx()),
@@ -129,7 +128,6 @@ fun TrimBar(
             val gh = size.height * 0.3f
             drawLine(grip, Offset(sx - handleW / 2, (size.height - gh) / 2), Offset(sx - handleW / 2, (size.height + gh) / 2), 2.dp.toPx())
             drawLine(grip, Offset(ex + handleW / 2, (size.height - gh) / 2), Offset(ex + handleW / 2, (size.height + gh) / 2), 2.dp.toPx())
-            // Tête de lecture
             val px = handleW + track * positionMs.coerceIn(startMs, endMs) / d
             drawLine(Color.White, Offset(px, 0f), Offset(px, size.height), 2.dp.toPx())
         }

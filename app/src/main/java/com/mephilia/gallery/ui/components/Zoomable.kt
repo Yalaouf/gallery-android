@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.launch
 
 /**
- * Conteneur zoomable (pincer / double-tap). N'intercepte les gestes à un doigt
- * que lorsqu'on est zoomé, pour laisser le pager défiler normalement.
+ * Pinch / double-tap zoom container. Single-finger gestures are only intercepted when zoomed in,
+ * so the pager can still swipe between items.
  */
 @Composable
 fun Zoomable(
@@ -78,11 +78,10 @@ fun Zoomable(
                             val oldScale = scale.value
                             val newScale = (oldScale * zoom).coerceIn(1f, 6f)
                             val center = Offset(size[0].width / 2f, size[0].height / 2f)
-                            // Zoom autour du centre des doigts
                             val focus = if (centroid == Offset.Unspecified) center else centroid
                             val raw = (offset.value - (focus - center)) * (newScale / oldScale) + (focus - center) + pan
                             val clamped = clamp(raw, newScale)
-                            // À un doigt, si on bute sur le bord horizontal, on laisse le pager prendre le relais
+                            // With one finger at the horizontal edge, let the pager take over
                             val atEdge = pointers == 1 && kotlin.math.abs(clamped.x - raw.x) > 0.5f &&
                                 kotlin.math.abs(pan.x) > kotlin.math.abs(pan.y)
                             scope.launch {

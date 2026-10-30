@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">Gallery</string>
 
-    <!-- Actions communes -->
     <string name="action_cancel">Cancel</string>
     <string name="action_ok">OK</string>
     <string name="action_back">Back</string>
@@ -19,14 +18,12 @@
     <string name="action_settings">Settings</string>
     <string name="action_allow">Allow</string>
 
-    <!-- Permissions -->
     <string name="perm_title">Access your photos</string>
     <string name="perm_text">The gallery needs access to your photos and videos to show them.</string>
     <string name="perm_button">Allow access</string>
     <string name="partial_access">Access limited to some photos</string>
     <string name="partial_access_button">Allow all</string>
 
-    <!-- Accueil -->
     <string name="tab_photos">Photos</string>
     <string name="tab_albums">Albums</string>
     <string name="subtitle_with_sort">%1$s · %2$s</string>
@@ -49,7 +46,6 @@
     <string name="yesterday">Yesterday</string>
     <string name="selected">Selected</string>
 
-    <!-- Tri et filtres -->
     <string name="sort_newest">Newest</string>
     <string name="sort_oldest">Oldest</string>
     <string name="sort_random">Random</string>
@@ -67,7 +63,6 @@
     <string name="sheet_sort_albums_by">Sort albums by</string>
     <string name="sheet_sort_albums_hint">Tap the active sort again to reverse the order</string>
 
-    <!-- Visionneuse -->
     <string name="details">Details</string>
     <string name="info_name">Name</string>
     <string name="info_date">Date</string>
@@ -79,7 +74,6 @@
     <string name="sound_on">Turn sound on</string>
     <string name="sound_off">Mute</string>
 
-    <!-- Sélection, déplacement, suppression -->
     <plurals name="trash_title">
         <item quantity="one">Move to trash?</item>
         <item quantity="other">Move %d items to trash?</item>
@@ -104,7 +98,6 @@
     <string name="created_in_pictures">Created in Pictures/</string>
     <string name="move_here">Move here</string>
 
-    <!-- Éditeurs -->
     <string name="edit_photo_title">Edit photo</string>
     <string name="edit_video_title">Edit video</string>
     <string name="tool_left">Left</string>
@@ -118,7 +111,6 @@
     <string name="aspect_free">Free</string>
     <string name="aspect_original">Original</string>
 
-    <!-- Enregistrement -->
     <string name="save_title">Save</string>
     <string name="save_replace">Replace original</string>
     <string name="save_replace_desc">The original file will be overwritten</string>
@@ -141,7 +133,6 @@
     <string name="error_create_file">Could not create the file</string>
     <string name="error_video_export">Video export failed (%1$s)</string>
 
-    <!-- Réglages -->
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
     <string name="theme_system">System</string>
@@ -174,4 +165,29 @@
     <string name="settings_media_management">Media management</string>
     <string name="media_management_desc">Replace, move and delete without Android asking for confirmation every time.</string>
     <string name="allowed">Allowed</string>
+
+    <string name="gif_button">Export as GIF</string>
+    <string name="gif_title">Export as GIF</string>
+    <string name="gif_size">Size</string>
+    <string name="gif_size_small">Small</string>
+    <string name="gif_size_medium">Medium</string>
+    <string name="gif_size_large">Large</string>
+    <string name="gif_smoothness">Smoothness</string>
+    <string name="gif_fps">%1$d fps</string>
+    <string name="gif_summary">%1$d px · %2$s · %3$d frames. The GIF is saved as a new image, the video is not changed.</string>
+    <string name="gif_export">Export</string>
+    <string name="gif_creating">Creating GIF…</string>
+    <string name="gif_saved">GIF saved: %1$s</string>
+    <string name="gif_failed">GIF export failed</string>
+    <string name="gif_too_long">GIFs are limited to %1$s (selection: %2$s). Trim the video first.</string>
+
+    <string name="edit_gif_title">Edit GIF</string>
+    <string name="gif_loop">Loop</string>
+
+    <string name="search_folders">Search folders</string>
+    <string name="action_clear">Clear</string>
+    <string name="sort_alphabetical">A → Z</string>
+    <string name="sort_recent">Recent</string>
+    <string name="create_folder_named">Create folder “%1$s”</string>
+    <string name="share_to_edit">Edit with Gallery</string>
 </resources>

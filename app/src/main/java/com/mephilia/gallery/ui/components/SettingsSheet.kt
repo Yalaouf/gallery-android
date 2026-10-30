@@ -59,7 +59,7 @@ fun SettingsSheet(onDismiss: () -> Unit) {
     val s by AppSettings.flow.collectAsStateWithLifecycle()
     fun canManage() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && MediaStore.canManageMedia(context)
     var canManageMedia by remember { mutableStateOf(canManage()) }
-    // Re-vérifie au retour des paramètres système
+    // Re-check when returning from the system settings
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { canManageMedia = canManage() }
 
     ModalBottomSheet(
@@ -119,7 +119,6 @@ fun SettingsSheet(onDismiss: () -> Unit) {
 
             SettingsTitle(stringResource(R.string.settings_editing))
             Text(stringResource(R.string.save_button_setting), style = MaterialTheme.typography.bodyLarge)
-            // Réglable séparément : ex. toujours remplacer les photos mais copier les vidéos
             SaveModeRow(stringResource(R.string.save_for_photos), s.saveModePhoto) { AppSettings.setSaveModeFor(false, it) }
             SaveModeRow(stringResource(R.string.save_for_videos), s.saveModeVideo) { AppSettings.setSaveModeFor(true, it) }
             Spacer(Modifier.height(8.dp))

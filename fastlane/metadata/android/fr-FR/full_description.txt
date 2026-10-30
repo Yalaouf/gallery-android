@@ -11,13 +11,15 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <ul>
 <li>Appui long puis glissement pour sélectionner beaucoup d'éléments d'un coup. La grille défile toute seule quand on atteint le bord.</li>
 <li>Sélectionnez une journée entière, ou tout, en un geste.</li>
-<li>Déplacez vers un autre dossier ou un nouveau, partagez, ou mettez à la corbeille.</li>
+<li>Déplacez vers un autre dossier ou un nouveau (avec recherche de dossier), partagez, ou mettez à la corbeille.</li>
 </ul>
 
 <b>Retoucher</b>
 <ul>
 <li>Photos : recadrage (libre ou format fixe), rotation, miroir. Les informations de la photo (date, appareil, position) sont conservées.</li>
-<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir.</li>
+<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir, et export des extraits courts (jusqu'à 15 secondes) en GIF animé.</li>
+<li>GIF : recadrage, rotation, miroir, vitesse et boucle. Les GIF animés sont lus dans la visionneuse.</li>
+<li>Ouvrez et modifiez des images depuis d'autres applications (Modifier avec, Ouvrir avec, Partager).</li>
 <li>Enregistrez une copie ou remplacez l'original. Choisissez à chaque fois, ou définissez un choix par défaut, séparément pour les photos et les vidéos.</li>
 </ul>
 

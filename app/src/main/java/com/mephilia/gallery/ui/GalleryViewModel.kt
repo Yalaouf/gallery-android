@@ -59,7 +59,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
                 AlbumSort.Created -> albums.sortedBy { it.created }
                 AlbumSort.Name -> albums.sortedBy { it.name.lowercase() }
             }
-            // Pour l'alphabétique, "descendant" = A→Z, plus naturel par défaut
+            // For names, "descending" means A→Z, the more natural default
             if (desc != (sort == AlbumSort.Name)) sorted.reversed() else sorted
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 

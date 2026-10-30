@@ -4,6 +4,7 @@ import android.app.Application
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.gif.AnimatedImageDecoder
 import coil3.request.crossfade
 import com.mephilia.gallery.data.AppSettings
 import com.mephilia.gallery.data.ThumbFetcher
@@ -20,6 +21,8 @@ class GalleryApp : Application(), SingletonImageLoader.Factory {
             .components {
                 add(ThumbKeyer())
                 add(ThumbFetcher.Factory())
+                // Animated GIF and WebP in the viewer and editor
+                add(AnimatedImageDecoder.Factory())
             }
             .crossfade(150)
             .build()

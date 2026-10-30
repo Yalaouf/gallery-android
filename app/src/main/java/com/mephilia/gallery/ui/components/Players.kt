@@ -14,7 +14,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 
-/** Lecteur avec repli sur un autre décodeur si le décodeur matériel échoue. */
+/** Falls back to another decoder if the hardware one fails to initialize. */
 @OptIn(UnstableApi::class)
 fun createPlayer(context: Context, uri: Uri, muted: Boolean): ExoPlayer =
     ExoPlayer.Builder(context, DefaultRenderersFactory(context).setEnableDecoderFallback(true))
@@ -26,9 +26,8 @@ fun createPlayer(context: Context, uri: Uri, muted: Boolean): ExoPlayer =
         }
 
 /**
- * Coupe complètement la piste audio et, dans ce cas, ne demande pas le focus audio :
- * les autres applications (YouTube en écran partagé…) continuent de jouer.
- * Avec le son, le focus est demandé normalement et les autres apps se mettent en pause.
+ * When muted, disables the audio track entirely and doesn't request audio focus, so other apps
+ * (e.g. YouTube in split screen) keep playing. Unmuted, focus is requested and other apps pause.
  */
 fun ExoPlayer.setMuted(muted: Boolean) {
     trackSelectionParameters = trackSelectionParameters.buildUpon()
@@ -43,7 +42,7 @@ fun ExoPlayer.setMuted(muted: Boolean) {
     )
 }
 
-/** Vrai en écran partagé / fenêtre flottante. Réévalué à chaque changement de configuration. */
+/** True in split screen or a floating window. Re-evaluated on every configuration change. */
 @Composable
 fun isInMultiWindow(): Boolean {
     LocalConfiguration.current

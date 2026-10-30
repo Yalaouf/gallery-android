@@ -57,6 +57,7 @@ import com.mephilia.gallery.ui.screens.HomeScreen
 import com.mephilia.gallery.ui.screens.ViewerScreen
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
+import com.mephilia.gallery.ui.editor.GifEditorScreen
 
 sealed interface Route {
     val key: String
@@ -79,6 +80,10 @@ sealed interface Route {
 
     data class EditVideo(val item: MediaItem) : Route {
         override val key = "edit-video/${item.id}"
+    }
+
+    data class EditGif(val item: MediaItem) : Route {
+        override val key = "edit-gif/${item.id}"
     }
 }
 
@@ -154,7 +159,7 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
     AnimatedContent(
         targetState = nav.current,
         transitionSpec = {
-            // Ressorts plutôt que durées fixes : plus fluide à haute fréquence et interruptible
+            // Springs instead of fixed durations: smoother at high refresh rates, and interruptible
             (fadeIn(spring(stiffness = Spring.StiffnessMedium)) +
                 scaleIn(spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow), initialScale = 0.94f)) togetherWith
                 fadeOut(tween(90))
@@ -186,14 +191,21 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                     startId = route.startId,
                     onBack = back,
                     onEdit = { item ->
-                        nav.push(if (item.isVideo) Route.EditVideo(item) else Route.EditPhoto(item))
+                        nav.push(editRouteFor(item))
                     },
                 )
                 is Route.EditPhoto -> PhotoEditorScreen(item = route.item, onClose = back)
                 is Route.EditVideo -> VideoEditorScreen(item = route.item, onClose = back)
+                is Route.EditGif -> GifEditorScreen(item = route.item, onClose = back)
             }
         }
     }
+}
+
+fun editRouteFor(item: MediaItem): Route = when {
+    item.isVideo -> Route.EditVideo(item)
+    item.mimeType.equals("image/gif", ignoreCase = true) -> Route.EditGif(item)
+    else -> Route.EditPhoto(item)
 }
 
 @Composable

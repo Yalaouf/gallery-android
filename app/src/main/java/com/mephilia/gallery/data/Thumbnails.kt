@@ -11,7 +11,7 @@ import coil3.key.Keyer
 import coil3.request.Options
 import coil3.size.pxOrElse
 
-/** Miniature système (rapide, mise en cache par Android) pour photos et vidéos. */
+/** System thumbnail (fast, cached by Android) for photos and videos. */
 data class Thumb(val item: MediaItem)
 
 class ThumbKeyer : Keyer<Thumb> {

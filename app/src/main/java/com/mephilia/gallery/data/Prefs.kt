@@ -21,6 +21,10 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("album_sort_desc", true)
         set(v) = sp.edit().putBoolean("album_sort_desc", v).apply()
 
+    var moveSortRecent: Boolean
+        get() = sp.getBoolean("move_sort_recent", false)
+        set(v) = sp.edit().putBoolean("move_sort_recent", v).apply()
+
     var gridColumns: Int
         get() = sp.getInt("grid_columns", 4)
         set(v) = sp.edit().putInt("grid_columns", v).apply()

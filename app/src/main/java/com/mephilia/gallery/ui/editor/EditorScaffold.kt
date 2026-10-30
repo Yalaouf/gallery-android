@@ -41,8 +41,8 @@ import com.mephilia.gallery.ui.screens.SystemBars
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.RowScope
 
-/** Squelette commun des éditeurs : barre du haut, zone d'aperçu, outils en bas. */
 @Composable
 fun EditorScaffold(
     title: String,
@@ -52,6 +52,7 @@ fun EditorScaffold(
     saveEnabled: Boolean,
     preview: @Composable () -> Unit,
     tools: @Composable ColumnScope.() -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     val settings by AppSettings.flow.collectAsStateWithLifecycle()
     val saveLabel = stringResource(if (isVideo) settings.saveModeVideo.buttonLabel else settings.saveModePhoto.buttonLabel)
@@ -63,8 +64,8 @@ fun EditorScaffold(
         ) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, stringResource(R.string.action_close), tint = Color.White) }
             Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            actions()
             Button(onClick = onSave, enabled = saveEnabled, modifier = Modifier.padding(end = 8.dp)) {
-                // Le libellé reflète le réglage d'enregistrement (demander / remplacer / copie)
                 Text(saveLabel)
             }
         }
@@ -80,7 +81,7 @@ fun EditorScaffold(
     }
 }
 
-/** Boîte qui occupe la plus grande taille possible au ratio [ratio] dans l'espace disponible. */
+/** Largest box with the given aspect [ratio] that fits the available space. */
 @Composable
 fun FitBox(ratio: Float, content: @Composable BoxScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -113,7 +114,7 @@ fun AspectChips(presets: List<AspectPreset>, selected: AspectPreset, onSelect: (
     }
 }
 
-/** [active] : un point signale que cet outil a une modification en cours. */
+/** [active] shows a dot meaning this tool has a pending edit. */
 @Composable
 fun ToolButton(
     icon: ImageVector,

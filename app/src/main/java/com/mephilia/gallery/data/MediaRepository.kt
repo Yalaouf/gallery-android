@@ -6,7 +6,9 @@ import android.content.Context
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +18,6 @@ import kotlinx.coroutines.withContext
 class MediaRepository(context: Context) {
     private val resolver: ContentResolver = context.contentResolver
 
-    /** Émet à chaque changement dans MediaStore. */
     fun changes(): Flow<Unit> = callbackFlow {
         val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
@@ -25,6 +26,59 @@ class MediaRepository(context: Context) {
         }
         resolver.registerContentObserver(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), true, observer)
         awaitClose { resolver.unregisterContentObserver(observer) }
+    }
+
+    /**
+     * Describes a file received from another app (screenshot, file manager…).
+     * MediaStore files keep their folder so they can be replaced; other files can only be saved as a copy.
+     */
+    suspend fun resolve(uri: Uri, typeHint: String?): MediaItem? = withContext(Dispatchers.IO) {
+        val mime = typeHint?.takeIf { '/' in it && !it.endsWith("*") }
+            ?: runCatching { resolver.getType(uri) }.getOrNull()
+            ?: return@withContext null
+        val isVideo = mime.startsWith("video/")
+        val now = System.currentTimeMillis()
+        var item = MediaItem(
+            id = uri.hashCode().toLong(), uri = uri, isVideo = isVideo,
+            name = uri.lastPathSegment ?: "media", mimeType = mime,
+            dateTaken = now, dateModified = now, size = 0, width = 0, height = 0, durationMs = 0,
+            bucketId = 0, bucketName = "", relativePath = "",
+        )
+        if (uri.authority == MediaStore.AUTHORITY) {
+            runCatching {
+                resolver.query(
+                    uri,
+                    arrayOf(
+                        MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE,
+                        MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_MODIFIED,
+                        MediaStore.MediaColumns.RELATIVE_PATH, MediaStore.MediaColumns.BUCKET_ID,
+                        MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
+                    ),
+                    null, null, null,
+                )?.use { c ->
+                    if (c.moveToFirst()) {
+                        val modified = c.getLong(4) * 1000
+                        item = item.copy(
+                            id = c.getLong(0),
+                            name = c.getString(1) ?: item.name,
+                            size = c.getLong(2),
+                            dateTaken = c.getLong(3).takeIf { it > 0 } ?: modified,
+                            dateModified = modified,
+                            relativePath = c.getString(5) ?: "",
+                            bucketId = c.getLong(6),
+                            bucketName = c.getString(7) ?: "",
+                        )
+                    }
+                }
+            }
+        } else {
+            runCatching {
+                resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) item = item.copy(name = c.getString(0) ?: item.name, size = c.getLong(1))
+                }
+            }
+        }
+        item
     }
 
     suspend fun loadAll(): List<MediaItem> = withContext(Dispatchers.IO) {
@@ -90,7 +144,8 @@ class MediaRepository(context: Context) {
                     height = c.getInt(hCol),
                     durationMs = c.getLong(durCol),
                     bucketId = c.getLong(bucketCol),
-                    bucketName = c.getString(bucketNameCol) ?: "Stockage",
+                    bucketName = c.getString(bucketNameCol)
+                        ?: c.getString(pathCol)?.trimEnd('/')?.substringAfterLast('/').orEmpty(),
                     relativePath = c.getString(pathCol) ?: "",
                 )
             }

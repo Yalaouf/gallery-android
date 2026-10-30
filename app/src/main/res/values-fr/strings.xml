@@ -172,4 +172,29 @@
     <string name="settings_media_management">Gestion des médias</string>
     <string name="media_management_desc">Permet de remplacer, déplacer et supprimer sans la confirmation d\'Android à chaque fois.</string>
     <string name="allowed">Autorisé</string>
+
+    <string name="gif_button">Exporter en GIF</string>
+    <string name="gif_title">Exporter en GIF</string>
+    <string name="gif_size">Taille</string>
+    <string name="gif_size_small">Petite</string>
+    <string name="gif_size_medium">Moyenne</string>
+    <string name="gif_size_large">Grande</string>
+    <string name="gif_smoothness">Fluidité</string>
+    <string name="gif_fps">%1$d img/s</string>
+    <string name="gif_summary">%1$d px · %2$s · %3$d images. Le GIF est enregistré comme nouvelle image, la vidéo n\'est pas modifiée.</string>
+    <string name="gif_export">Exporter</string>
+    <string name="gif_creating">Création du GIF…</string>
+    <string name="gif_saved">GIF enregistré : %1$s</string>
+    <string name="gif_failed">Échec de l\'export GIF</string>
+    <string name="gif_too_long">GIF limité à %1$s (sélection : %2$s). Coupez d\'abord la vidéo.</string>
+
+    <string name="edit_gif_title">Modifier le GIF</string>
+    <string name="gif_loop">Boucle</string>
+
+    <string name="search_folders">Rechercher un dossier</string>
+    <string name="action_clear">Effacer</string>
+    <string name="sort_alphabetical">A → Z</string>
+    <string name="sort_recent">Récents</string>
+    <string name="create_folder_named">Créer le dossier « %1$s »</string>
+    <string name="share_to_edit">Modifier avec Galerie</string>
 </resources>

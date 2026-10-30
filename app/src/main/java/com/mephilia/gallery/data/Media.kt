@@ -10,9 +10,8 @@ data class MediaItem(
     val isVideo: Boolean,
     val name: String,
     val mimeType: String,
-    /** Date de prise de vue (ms), à défaut date d'ajout. */
+    /** Capture date (ms), or the date added when unknown. */
     val dateTaken: Long,
-    /** Date de modification (ms). */
     val dateModified: Long,
     val size: Long,
     val width: Int,
@@ -26,13 +25,11 @@ data class MediaItem(
 data class Album(
     val id: Long,
     val name: String,
-    /** Chemin relatif du dossier (ex. "DCIM/Camera/"). */
     val relativePath: String,
     val cover: MediaItem,
     val count: Int,
-    /** Plus récente modification d'un élément du dossier. */
     val lastModified: Long,
-    /** Plus ancien élément du dossier (approximation de la date de création). */
+    /** Oldest item in the folder, used as an approximation of its creation date. */
     val created: Long,
 )
 
@@ -56,7 +53,6 @@ enum class AlbumSort(@StringRes val label: Int) {
     Name(R.string.album_sort_name),
 }
 
-/** Comportement du bouton "Enregistrer" des éditeurs. */
 enum class SaveMode(@StringRes val label: Int, @StringRes val buttonLabel: Int) {
     Ask(R.string.save_mode_ask, R.string.save_button_ask),
     Replace(R.string.save_mode_replace, R.string.save_button_replace),

@@ -18,12 +18,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
-/** Rectangle de recadrage normalisé (0..1) sur toute la surface. */
+/** Normalized (0..1) crop covering the whole content. */
 val FullCrop = Rect(0f, 0f, 1f, 1f)
 
 data class AspectPreset(val label: String, val ratio: Float?)
 
-/** [freeLabel] / [originalLabel] : libellés traduits des deux premiers formats. */
 fun aspectPresets(originalRatio: Float, freeLabel: String, originalLabel: String) = listOf(
     AspectPreset(freeLabel, null),
     AspectPreset(originalLabel, originalRatio),
@@ -35,20 +34,17 @@ fun aspectPresets(originalRatio: Float, freeLabel: String, originalLabel: String
     AspectPreset("16:9", 16f / 9f),
 )
 
-/**
- * Fait tourner un recadrage normalisé avec l'image, de [quarterTurns] quarts de tour
- * (positif = sens horaire), pour qu'il ne soit pas perdu lors d'une rotation.
- */
+/** Rotates a normalized crop along with the image by [quarterTurns] (positive = clockwise). */
 fun Rect.rotatedBy(quarterTurns: Int): Rect {
     var r = this
     repeat(quarterTurns.mod(4)) {
-        // Sens horaire : le point (x, y) devient (1 - y, x)
+        // Clockwise: point (x, y) becomes (1 - y, x)
         r = Rect(1f - r.bottom, r.left, 1f - r.top, r.right)
     }
     return r
 }
 
-/** Plus grand rectangle centré de ratio [ratio] (largeur/hauteur en pixels) dans un contenu de ratio [contentRatio]. */
+/** Largest centered crop with pixel aspect [ratio] inside content of aspect [contentRatio]. */
 fun centeredCrop(ratio: Float?, contentRatio: Float): Rect {
     if (ratio == null) return FullCrop
     val k = ratio / contentRatio
@@ -59,8 +55,8 @@ fun centeredCrop(ratio: Float?, contentRatio: Float): Rect {
 private enum class Handle { TL, TR, BL, BR, L, T, R, B, Move }
 
 /**
- * Overlay de recadrage à placer exactement au-dessus du contenu (même taille).
- * [ratio] = ratio largeur/hauteur imposé (null = libre).
+ * Crop overlay, laid out exactly over the content (same size).
+ * [ratio] is the enforced width/height ratio, or null for a free crop.
  */
 @Composable
 fun CropOverlay(
@@ -99,12 +95,10 @@ fun CropOverlay(
     ) {
         val r = crop.toPx(size.width, size.height)
         val dim = Color.Black.copy(alpha = 0.55f)
-        // Zone assombrie autour du cadre
         drawRect(dim, Offset.Zero, Size(size.width, r.top))
         drawRect(dim, Offset(0f, r.bottom), Size(size.width, size.height - r.bottom))
         drawRect(dim, Offset(0f, r.top), Size(r.left, r.height))
         drawRect(dim, Offset(r.right, r.top), Size(size.width - r.right, r.height))
-        // Grille des tiers
         val grid = Color.White.copy(alpha = 0.35f)
         for (i in 1..2) {
             val x = r.left + r.width * i / 3f
@@ -113,7 +107,6 @@ fun CropOverlay(
             drawLine(grid, Offset(r.left, y), Offset(r.right, y), 1.dp.toPx())
         }
         drawRect(Color.White, r.topLeft, r.size, style = Stroke(1.5.dp.toPx()))
-        // Poignées d'angle
         val len = 20.dp.toPx()
         val sw = 4.dp.toPx()
         val c = Color.White
@@ -165,14 +158,13 @@ private fun dragRect(r: Rect, h: Handle, d: Offset, w: Float, hh: Float, min: Fl
         if (h == Handle.BL || h == Handle.BR || h == Handle.B) b = (b + d.y).coerceIn(t + min, hh)
         return Rect(l, t, rr, b)
     }
-    // Ratio imposé : on ancre le coin opposé et on dérive la hauteur de la largeur
+    // Fixed ratio: anchor the opposite corner and derive the height from the width
     val anchorX = if (h == Handle.TL || h == Handle.BL) r.right else r.left
     val anchorY = if (h == Handle.TL || h == Handle.TR) r.bottom else r.top
     val growLeft = anchorX == r.right
     val growUp = anchorY == r.bottom
     val dxSigned = if (growLeft) -d.x else d.x
     val dySigned = if (growUp) -d.y else d.y
-    // Utilise le déplacement dominant pour un redimensionnement naturel
     var newW = if (abs(dxSigned) >= abs(dySigned * ratio)) r.width + dxSigned else r.width + dySigned * ratio
     val maxW = if (growLeft) anchorX else w - anchorX
     val maxH = if (growUp) anchorY else hh - anchorY

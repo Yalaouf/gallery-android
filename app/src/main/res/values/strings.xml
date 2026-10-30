@@ -172,8 +172,8 @@
     <string name="gif_size_small">Small</string>
     <string name="gif_size_medium">Medium</string>
     <string name="gif_size_large">Large</string>
-    <string name="gif_smoothness">Smoothness</string>
-    <string name="gif_fps">%1$d fps</string>
+    <string name="gif_smoothness">Smoothness (frames per second)</string>
+    <string name="gif_fps">%1$d</string>
     <string name="gif_summary">%1$d px · %2$s · %3$d frames. The GIF is saved as a new image, the video is not changed.</string>
     <string name="gif_export">Export</string>
     <string name="gif_creating">Creating GIF…</string>
@@ -190,4 +190,26 @@
     <string name="sort_recent">Recent</string>
     <string name="create_folder_named">Create folder “%1$s”</string>
     <string name="share_to_edit">Edit with Gallery</string>
+    <string name="tool_straighten">Straighten</string>
+    <string name="angle_degrees">%1$.1f°</string>
+    <string name="search_albums">Search albums</string>
+    <string name="no_album_match">No album matches “%1$s”</string>
+
+    <string name="trash_title">Trash</string>
+    <string name="trash_empty">The trash is empty</string>
+    <string name="trash_info">Items are deleted for good after 30 days.</string>
+    <string name="action_restore">Restore</string>
+    <string name="action_delete_forever">Delete</string>
+    <string name="action_empty_trash">Empty trash</string>
+    <plurals name="delete_forever_title">
+        <item quantity="one">Delete %d item for good?</item>
+        <item quantity="other">Delete %d items for good?</item>
+    </plurals>
+    <string name="delete_forever_text">This can\'t be undone.</string>
+    <plurals name="days_left">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="show_trash">Show the trash</string>
+    <string name="show_trash_desc">As a folder in the Albums tab</string>
 </resources>

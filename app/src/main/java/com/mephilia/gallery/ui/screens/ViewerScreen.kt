@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -92,6 +93,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 import kotlinx.coroutines.flow.flowOf
+import com.mephilia.gallery.data.MediaEvents
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +105,8 @@ fun ViewerScreen(
     onEdit: (MediaItem) -> Unit,
     /** Shown instead of the gallery, e.g. a file opened from another app. */
     items: List<MediaItem>? = null,
+    /** Trash items: only restore / delete for good are offered. */
+    trashMode: Boolean = false,
 ) {
     val source: Flow<List<MediaItem>> = remember(bucketId, items) {
         items?.let { flowOf(it) } ?: bucketId?.let { vm.albumMedia(it) } ?: vm.media
@@ -195,7 +199,15 @@ fun ViewerScreen(
             }
         }
 
-        AnimatedVisibility(showBars, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
+        if (trashMode) AnimatedVisibility(showBars, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
+            TrashActionsBar(
+                items = listOf(current),
+                access = access,
+                onSelectAll = null,
+                onDone = {},
+                modifier = Modifier.navigationBarsPadding().padding(bottom = if (current.isVideo) 80.dp else 16.dp),
+            )
+        } else AnimatedVisibility(showBars, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -210,7 +222,7 @@ fun ViewerScreen(
                 ViewerAction(Icons.Rounded.Info, stringResource(R.string.action_info)) { showInfo = true }
                 ViewerAction(Icons.Rounded.Delete, stringResource(R.string.action_delete)) {
                     if (AppSettings.current.confirmDelete) confirmTrash = true
-                    else scope.launch { access.trash(listOf(current.uri)) }
+                    else scope.launch { if (access.trash(listOf(current.uri))) MediaEvents.removed(listOf(current.id)) }
                 }
             }
         }
@@ -219,7 +231,7 @@ fun ViewerScreen(
     if (confirmTrash) {
         ConfirmTrashDialog(1, onDismiss = { confirmTrash = false }) {
             confirmTrash = false
-            scope.launch { access.trash(listOf(current.uri)) }
+            scope.launch { if (access.trash(listOf(current.uri))) MediaEvents.removed(listOf(current.id)) }
         }
     }
 
@@ -253,6 +265,10 @@ private fun PhotoPage(item: MediaItem, onTap: () -> Unit) {
     val maxPx = with(density) { (maxOf(config.screenWidthDp, config.screenHeightDp).dp.toPx() * 2).toInt() }
         .coerceAtMost(4096)
     var loaded by remember(item.id) { mutableStateOf(false) }
+    // After the file is replaced, keep showing the previous version until the new one is ready (no black frame)
+    // Saved state, because the viewer is rebuilt when coming back from the editor
+    var shownKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
+    val key = "full:${item.uri}@${item.dateModified}"
     Zoomable(Modifier.fillMaxSize(), onTap = onTap) {
         if (!loaded) {
             AsyncImage(
@@ -263,16 +279,22 @@ private fun PhotoPage(item: MediaItem, onTap: () -> Unit) {
             )
         }
         AsyncImage(
-            model = remember(item.uri, item.dateModified, maxPx) {
+            model = remember(key, maxPx) {
                 ImageRequest.Builder(context)
                     .data(item.uri)
-                    .memoryCacheKey("full:${item.uri}@${item.dateModified}")
+                    .memoryCacheKey(key)
+                    .placeholderMemoryCacheKey(shownKey)
                     .size(maxPx)
                     .build()
             },
             contentDescription = item.name,
             contentScale = ContentScale.Fit,
-            onState = { if (it is AsyncImagePainter.State.Success) loaded = true },
+            onState = {
+                if (it is AsyncImagePainter.State.Success) {
+                    loaded = true
+                    shownKey = key
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         )
     }

@@ -48,6 +48,7 @@ import java.io.File
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 import android.provider.MediaStore
+import com.mephilia.gallery.data.MediaEvents
 
 private sealed interface Phase {
     data object Idle : Phase
@@ -115,17 +116,22 @@ fun SaveFlow(
     fun replace() = run { temp ->
         if (sameFormat) {
             access.write(listOf(item.uri)) { writer.overwrite(item.uri, temp) }
+            MediaEvents.replaced(item.id)
             finish(context.getString(R.string.saved_replaced))
         } else {
             // Format we can't re-encode (e.g. HEIC): write a new file, then delete the original
             val name = item.name.substringBeforeLast('.', item.name) + ".$outputExtension"
             writer.insertCopy(item, temp, name, outputMime)
-            finish(context.getString(if (access.delete(listOf(item.uri))) R.string.saved_replaced else R.string.saved_copy))
+            val deleted = access.delete(listOf(item.uri))
+            if (deleted) MediaEvents.removed(listOf(item.id))
+            MediaEvents.changed()
+            finish(context.getString(if (deleted) R.string.saved_replaced else R.string.saved_copy))
         }
     }
 
     fun copy() = run { temp ->
         writer.insertCopy(item, temp, MediaWriter.copyName(item.name, outputExtension), outputMime)
+        MediaEvents.changed()
         finish(context.getString(R.string.saved_copy))
     }
 

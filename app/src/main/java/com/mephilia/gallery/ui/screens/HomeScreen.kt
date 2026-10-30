@@ -90,6 +90,19 @@ import com.mephilia.gallery.ui.components.rememberSelection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.mephilia.gallery.R
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import com.mephilia.gallery.ui.components.normalizeForSearch
+import com.mephilia.gallery.ui.components.snappyItemModifier
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.ui.draw.alpha
+import com.mephilia.gallery.data.AppSettings
 
 @Composable
 fun HomeScreen(
@@ -100,6 +113,7 @@ fun HomeScreen(
     onRequestAccess: () -> Unit,
     onOpenMedia: (MediaItem) -> Unit,
     onOpenAlbum: (Album) -> Unit,
+    onOpenTrash: () -> Unit,
 ) {
     SystemBars(lightIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f)
     // Keeps each tab's state (scroll position…) when switching tabs
@@ -117,7 +131,7 @@ fun HomeScreen(
                     onSelectingChange = { selecting = it },
                     onOpenSettings = { showSettings = true },
                 )
-                else -> AlbumsTab(vm, onOpenAlbum, onOpenSettings = { showSettings = true })
+                else -> AlbumsTab(vm, onOpenAlbum, onOpenTrash, onOpenSettings = { showSettings = true })
             }
         }
         AnimatedVisibility(
@@ -262,20 +276,36 @@ private fun PhotosTab(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AlbumsTab(vm: GalleryViewModel, onOpen: (Album) -> Unit, onOpenSettings: () -> Unit) {
+private fun AlbumsTab(vm: GalleryViewModel, onOpen: (Album) -> Unit, onOpenTrash: () -> Unit, onOpenSettings: () -> Unit) {
     val albums by vm.albums.collectAsStateWithLifecycle()
+    val trash by vm.trash.collectAsStateWithLifecycle()
+    val settings by AppSettings.flow.collectAsStateWithLifecycle()
     val loading by vm.loading.collectAsStateWithLifecycle()
     val sort by vm.albumSort.collectAsStateWithLifecycle()
     val desc by vm.albumSortDescending.collectAsStateWithLifecycle()
     var showOptions by rememberSaveable { mutableStateOf(false) }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val gridState = rememberLazyGridState()
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val shown = remember(albums, query) {
+        val q = normalizeForSearch(query.trim())
+        if (q.isEmpty()) albums
+        else albums.filter { normalizeForSearch(it.name).contains(q) || normalizeForSearch(it.relativePath).contains(q) }
+    }
+    fun closeSearch() {
+        searching = false
+        query = ""
+    }
+    BackHandler(enabled = searching, onBack = ::closeSearch)
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            LargeTopAppBar(
+            if (searching) {
+                AlbumSearchBar(query, onQueryChange = { query = it }, onClose = ::closeSearch)
+            } else LargeTopAppBar(
                 title = {
                     Column {
                         Text(stringResource(R.string.tab_albums), fontWeight = FontWeight.Bold)
@@ -293,6 +323,7 @@ private fun AlbumsTab(vm: GalleryViewModel, onOpen: (Album) -> Unit, onOpenSetti
                     }
                 },
                 actions = {
+                    IconButton(onClick = { searching = true }) { Icon(Icons.Rounded.Search, stringResource(R.string.search_albums)) }
                     IconButton(onClick = { showOptions = true }) { Icon(Icons.Rounded.Tune, stringResource(R.string.action_sort)) }
                     IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, stringResource(R.string.action_settings)) }
                 },
@@ -304,6 +335,7 @@ private fun AlbumsTab(vm: GalleryViewModel, onOpen: (Album) -> Unit, onOpenSetti
             when {
                 loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 albums.isEmpty() -> EmptyState(Icons.Rounded.Folder, stringResource(R.string.empty_albums))
+                shown.isEmpty() -> EmptyState(Icons.Rounded.Search, stringResource(R.string.no_album_match, query.trim()))
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(160.dp),
                     state = gridState,
@@ -311,8 +343,11 @@ private fun AlbumsTab(vm: GalleryViewModel, onOpen: (Album) -> Unit, onOpenSetti
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
-                    items(albums, key = { it.id }) { album ->
-                        AlbumCard(album, Modifier.animateItem()) { onOpen(album) }
+                    items(shown, key = { it.id }) { album ->
+                        AlbumCard(album, snappyItemModifier()) { onOpen(album) }
+                    }
+                    if (settings.showTrash && query.isBlank()) {
+                        item(key = "trash") { TrashCard(trash, snappyItemModifier(), onOpenTrash) }
                     }
                 }
             }
@@ -325,6 +360,79 @@ private fun AlbumsTab(vm: GalleryViewModel, onOpen: (Album) -> Unit, onOpenSetti
             descending = desc,
             onSort = vm::setAlbumSort,
             onDismiss = { showOptions = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlbumSearchBar(query: String, onQueryChange: (String) -> Unit, onClose: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onClose) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) }
+        },
+        title = {
+            TextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.search_albums)) },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            )
+        },
+        actions = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Rounded.Close, stringResource(R.string.action_clear)) }
+            }
+        },
+    )
+}
+
+@Composable
+private fun TrashCard(trash: List<MediaItem>, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center,
+        ) {
+            trash.firstOrNull()?.let { cover ->
+                AsyncImage(
+                    model = Thumb(cover),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().alpha(0.35f),
+                )
+            }
+            Icon(
+                Icons.Rounded.Delete, null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(48.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.trash_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        Text(
+            "${trash.size}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
         )
     }
 }

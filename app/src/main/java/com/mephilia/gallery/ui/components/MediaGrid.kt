@@ -66,6 +66,11 @@ import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 import androidx.compose.ui.platform.LocalConfiguration
 import android.text.format.DateFormat
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.lazy.grid.LazyGridItemScope
+import androidx.compose.ui.unit.IntOffset
 
 private sealed interface GridEntry {
     /** [ids]: the day's items, so the header can select them all. */
@@ -84,6 +89,8 @@ fun MediaGrid(
     onClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
     selection: MediaSelection? = null,
+    /** Optional label shown on each thumbnail (e.g. days left in the trash). */
+    badge: ((MediaItem) -> String?)? = null,
     header: (LazyGridScope.() -> Unit)? = null,
 ) {
     val today = stringResource(R.string.today)
@@ -188,18 +195,29 @@ fun MediaGrid(
                     selectionMode = selected.isNotEmpty(),
                     allSelected = e.ids.all { it in selected },
                     onToggle = { selection?.toggleAll(e.ids) },
-                    modifier = Modifier.animateItem(),
+                    modifier = snappyItemModifier(),
                 )
                 is GridEntry.Cell -> MediaThumbnail(
                     item = e.item,
-                    modifier = Modifier.animateItem(),
+                    modifier = snappyItemModifier(),
                     selectionMode = selected.isNotEmpty(),
                     isSelected = e.item.id in selected,
+                    badge = badge?.invoke(e.item),
                 ) { onClick(e.item) }
             }
         }
     }
 }
+
+/**
+ * Removed items vanish at once (no fade-out, which reads as a delay after a delete)
+ * and the neighbours slide into place quickly.
+ */
+fun LazyGridItemScope.snappyItemModifier(): Modifier =
+    Modifier.animateItem(
+        fadeOutSpec = null,
+        placementSpec = spring(stiffness = Spring.StiffnessMedium, visibilityThreshold = IntOffset.VisibilityThreshold),
+    )
 
 @Composable
 fun MediaThumbnail(
@@ -207,6 +225,7 @@ fun MediaThumbnail(
     modifier: Modifier = Modifier,
     selectionMode: Boolean = false,
     isSelected: Boolean = false,
+    badge: String? = null,
     onClick: () -> Unit,
 ) {
     val inset by animateFloatAsState(if (isSelected) 0.86f else 1f, label = "inset")
@@ -226,7 +245,7 @@ fun MediaThumbnail(
                 .clip(RoundedCornerShape(if (isSelected) 14.dp else 4.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
-            ThumbnailContent(item)
+            ThumbnailContent(item, badge)
         }
         if (selectionMode) {
             SelectionMark(isSelected, Modifier.align(Alignment.TopStart).padding(6.dp))
@@ -280,7 +299,7 @@ private fun SelectionMark(isSelected: Boolean, modifier: Modifier = Modifier, on
 }
 
 @Composable
-private fun ThumbnailContent(item: MediaItem) {
+private fun ThumbnailContent(item: MediaItem, badge: String?) {
     Box(Modifier.fillMaxSize()) {
         AsyncImage(
             model = Thumb(item),
@@ -288,6 +307,19 @@ private fun ThumbnailContent(item: MediaItem) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
+        if (badge != null) {
+            Text(
+                badge,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(4.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+            )
+        }
         if (item.isVideo) {
             Box(
                 Modifier

@@ -61,4 +61,15 @@ class GifEncoderTest {
             File(dir, "frame$n.ppm").writeBytes(ppm.toByteArray())
         }
     }
+
+    /** Encodes a natural-looking image (plasma gradients) to build/test-gifs/plasma.gif, for visual quality checks. */
+    @Test
+    fun writesPlasmaSample() {
+        val img = javax.imageio.ImageIO.read(javaClass.classLoader!!.getResourceAsStream("gif/plasma.png"))
+        val px = IntArray(img.width * img.height)
+        img.getRGB(0, 0, img.width, img.height, px, 0, img.width)
+        val bytes = ByteArrayOutputStream()
+        GifEncoder(bytes, img.width, img.height).use { it.addFrame(px, 10) }
+        File("build/test-gifs").apply { mkdirs() }.resolve("plasma.gif").writeBytes(bytes.toByteArray())
+    }
 }

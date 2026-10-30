@@ -1,0 +1,119 @@
+# Builds a signed APK and publishes it as a GitHub release.
+#
+# - Automatically when a version tag (v1.3, v1.4…) is pushed.
+# - Manually ("Run workflow" in the Actions tab) for an existing tag, e.g. to publish older versions.
+#   Those releases are not marked as "Latest".
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   RELEASE_KEYSTORE_BASE64   the release keystore, base64-encoded
+#   RELEASE_KEYSTORE_PASSWORD the keystore password
+#   RELEASE_KEY_ALIAS         the key alias
+#   RELEASE_KEY_PASSWORD      the key password
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish (e.g. v1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tagged code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      # Older tags have no (or an incomplete) changelog: release notes always come from the default branch
+      - name: Check out the current changelog
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: current
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode the release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "::error::The RELEASE_KEYSTORE_BASE64 secret is missing"
+            exit 1
+          fi
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Build the APK
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:testDebugUnitTest :app:assembleRelease
+
+      # Versions before 1.3 don't know the release key and build an unsigned APK: sign it here
+      - name: Sign the APK if needed
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          OUT=app/build/outputs/apk/release
+          if [ -f "$OUT/app-release.apk" ]; then
+            cp "$OUT/app-release.apk" signed.apk
+          else
+            "$BUILD_TOOLS/zipalign" -p -f 4 "$OUT/app-release-unsigned.apk" aligned.apk
+            "$BUILD_TOOLS/apksigner" sign \
+              --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$RELEASE_KEY_ALIAS" \
+              --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEY_PASSWORD \
+              --out signed.apk aligned.apk
+          fi
+          "$BUILD_TOOLS/apksigner" verify --print-certs signed.apk
+
+      - name: Extract the release notes from CHANGELOG.md
+        run: |
+          VERSION="${TAG#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[0-9.]+\]: / { exit }
+            found { print }
+          ' current/CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then echo "See CHANGELOG.md." > release-notes.md; fi
+          cat release-notes.md
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Manually published (older) versions must not take the "Latest" badge from the newest one
+          LATEST: ${{ github.event_name == 'push' }}
+        run: |
+          APK="gallery-${TAG}.apk"
+          cp signed.apk "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+          gh release create "$TAG" "$APK" "$APK.sha256" \
+            --verify-tag \
+            --latest="$LATEST" \
+            --title "Gallery ${TAG#v}" \
+            --notes-file release-notes.md

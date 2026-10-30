@@ -74,7 +74,9 @@ fun PhotoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                 CircularProgressIndicator()
             } else {
                 FitBox(previewRatio) {
-                    Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+                    Straightened(previewRatio, edits.angle) {
+                        Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+                    }
                     CropOverlay(
                         crop = edits.crop,
                         onCropChange = { edits = edits.copy(crop = it) },
@@ -89,12 +91,15 @@ fun PhotoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                 presetIndex = presets.indexOf(it)
                 edits = edits.copy(crop = centeredCrop(it.ratio, previewRatio))
             }
+            StraightenSlider(edits.angle) { edits = edits.copy(angle = it) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 ToolButton(Icons.AutoMirrored.Rounded.RotateLeft, stringResource(R.string.tool_left)) { rotate(-1) }
                 ToolButton(Icons.AutoMirrored.Rounded.RotateRight, stringResource(R.string.tool_right)) { rotate(1) }
                 ToolButton(Icons.Rounded.Flip, stringResource(R.string.tool_mirror)) {
+                    // Mirroring reverses a tilt, so the angle flips sign to keep the image straight
                     edits = edits.copy(
                         flipH = !edits.flipH,
+                        angle = -edits.angle,
                         crop = edits.crop.let { c -> c.copy(left = 1f - c.right, right = 1f - c.left) },
                     )
                 }

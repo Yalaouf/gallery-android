@@ -55,12 +55,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material3.Switch
 import androidx.compose.ui.Alignment
+import com.mephilia.gallery.data.MediaEvents
 
 /** Longer GIFs get too heavy. */
 const val GIF_MAX_DURATION_MS = 15_000L
 
 private val GIF_SIZES = listOf(320, 480, 640)
-private val GIF_FPS = listOf(10, 15)
+// 50 fps is the GIF maximum: frame delays are stored in hundredths of a second,
+// and players slow down delays under 2 cs (60 fps would play about 4× too slowly)
+private val GIF_FPS = listOf(10, 15, 30, 50)
 
 /**
  * Creates a GIF from [startMs]..[endMs] of the video with the same edits as the video export.
@@ -161,7 +164,7 @@ fun GifExportFlow(
     val scope = rememberCoroutineScope()
     var phase by remember { mutableStateOf<GifPhase>(GifPhase.Options) }
     var sizeIndex by rememberSaveable { mutableIntStateOf(1) }
-    var fpsIndex by rememberSaveable { mutableIntStateOf(0) }
+    var fpsIndex by rememberSaveable { mutableIntStateOf(1) }
     var loop by rememberSaveable { mutableStateOf(true) }
     var job by remember { mutableStateOf<Job?>(null) }
 
@@ -177,6 +180,7 @@ fun GifExportFlow(
                 }
                 val name = MediaWriter.copyName(item.name, "gif")
                 writer.insertCopy(item, temp, name, "image/gif")
+                MediaEvents.changed()
                 Toast.makeText(context, context.getString(R.string.gif_saved, name), Toast.LENGTH_LONG).show()
                 onDismiss()
             } catch (e: CancellationException) {

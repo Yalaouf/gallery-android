@@ -1,0 +1,6 @@
+New in 1.3:
+• Trash: restore deleted items or delete them for good (can be hidden in Settings)
+• Straighten photos and GIFs by any angle, with automatic zoom
+• GIF export at 30 and 50 fps, and better GIF quality
+• Search in the Albums tab
+• Instant refresh after deleting, replacing or moving

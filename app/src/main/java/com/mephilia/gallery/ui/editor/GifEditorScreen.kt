@@ -87,6 +87,7 @@ fun GifEditorScreen(item: MediaItem, onClose: () -> Unit) {
             } else {
                 FitBox(ratio) {
                     // The animated preview ignores the speed, which is only applied when saving
+                    Straightened(ratio, edits.angle) {
                     Transformed(edits.quarterTurns, edits.flipH) {
                         AsyncImage(
                             model = remember(item.uri, item.dateModified) {
@@ -99,6 +100,7 @@ fun GifEditorScreen(item: MediaItem, onClose: () -> Unit) {
                             contentScale = ContentScale.FillBounds,
                             modifier = Modifier.fillMaxSize(),
                         )
+                    }
                     }
                     CropOverlay(
                         crop = edits.crop,
@@ -114,6 +116,7 @@ fun GifEditorScreen(item: MediaItem, onClose: () -> Unit) {
                 presetIndex = presets.indexOf(it)
                 edits = edits.copy(crop = centeredCrop(it.ratio, ratio))
             }
+            StraightenSlider(edits.angle) { edits = edits.copy(angle = it) }
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -144,6 +147,7 @@ fun GifEditorScreen(item: MediaItem, onClose: () -> Unit) {
                 ToolButton(Icons.Rounded.Flip, stringResource(R.string.tool_mirror), selected = edits.flipH) {
                     edits = edits.copy(
                         flipH = !edits.flipH,
+                        angle = -edits.angle,
                         crop = edits.crop.let { c -> c.copy(left = 1f - c.right, right = 1f - c.left) },
                     )
                 }

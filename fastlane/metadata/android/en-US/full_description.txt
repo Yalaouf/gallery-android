@@ -3,7 +3,7 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <b>Browse</b>
 <ul>
 <li><b>Photos</b>: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns.</li>
-<li><b>Albums</b>: your folders, sorted by date modified, date created or name.</li>
+<li><b>Albums</b>: your folders, sorted by date modified, date created or name, with search.</li>
 <li>Full-screen viewer with pinch and double-tap zoom, and a video player.</li>
 </ul>
 
@@ -11,13 +11,13 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <ul>
 <li>Long-press then drag to select many items at once. The grid scrolls by itself when you reach the edge.</li>
 <li>Select a whole day, or everything, in one tap.</li>
-<li>Move items to another folder or to a new one (with folder search), share them, or send them to the trash.</li>
+<li>Move items to another folder or to a new one (with folder search), share them, or send them to the trash, where they can be restored for 30 days.</li>
 </ul>
 
 <b>Edit</b>
 <ul>
-<li>Photos: crop (free or fixed ratio), rotate, mirror. Photo details (date, camera, location) are kept.</li>
-<li>Videos: trim with a live preview, crop, rotate, mirror, and export short clips (up to 15 seconds) as animated GIFs.</li>
+<li>Photos: crop (free or fixed ratio), rotate, straighten by any angle, mirror. Photo details (date, camera, location) are kept.</li>
+<li>Videos: trim with a live preview, crop, rotate, mirror, and export short clips (up to 15 seconds) as animated GIFs, up to 50 fps.</li>
 <li>GIFs: crop, rotate, mirror, change speed and looping. Animated GIFs play in the viewer.</li>
 <li>Open and edit images from other apps (Edit with, Open with, Share).</li>
 <li>Save as a copy or replace the original. Choose each time, or set a default, separately for photos and videos.</li>

@@ -79,6 +79,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.mephilia.gallery.data.Prefs
 import java.text.Normalizer
+import com.mephilia.gallery.data.MediaEvents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +121,7 @@ fun SelectionActionsBar(
             BarAction(Icons.Rounded.Share, stringResource(R.string.action_share)) { shareMedia(context, items) }
             BarAction(Icons.Rounded.Delete, stringResource(R.string.action_delete)) {
                 if (AppSettings.current.confirmDelete) confirmTrash = true
-                else scope.launch { if (access.trash(items.map { it.uri })) onDone() }
+                else scope.launch { trash(access, items, onDone) }
             }
         }
     }
@@ -128,12 +129,19 @@ fun SelectionActionsBar(
     if (confirmTrash) {
         ConfirmTrashDialog(items.size, onDismiss = { confirmTrash = false }) {
             confirmTrash = false
-            scope.launch { if (access.trash(items.map { it.uri })) onDone() }
+            scope.launch { trash(access, items, onDone) }
         }
     }
 
     if (moving) {
         MoveFlow(items, albums, onDismiss = { moving = false }, onMoved = { moving = false; onDone() })
+    }
+}
+
+private suspend fun trash(access: MediaAccess, items: List<MediaItem>, onDone: () -> Unit) {
+    if (access.trash(items.map { it.uri })) {
+        MediaEvents.removed(items.map { it.id })
+        onDone()
     }
 }
 
@@ -185,7 +193,7 @@ fun shareMedia(context: Context, items: List<MediaItem>) {
 }
 
 /** Lowercase without accents, so "tele" matches "Télé". */
-private fun normalizeForSearch(s: String): String =
+internal fun normalizeForSearch(s: String): String =
     Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
 
 private fun isValidFolderName(name: String) =
@@ -252,6 +260,7 @@ fun MoveFlow(
                 append(res.getQuantityString(R.plurals.moved_to, moved, moved, folder))
                 if (failed > 0) append(" (").append(res.getQuantityString(R.plurals.move_failed, failed, failed)).append(")")
             }
+            MediaEvents.changed()
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             onMoved()
         }

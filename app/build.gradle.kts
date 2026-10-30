@@ -9,6 +9,12 @@ val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
+/** Release key settings: from local.properties on a dev machine, from environment variables in CI. */
+fun releaseSetting(localKey: String, envKey: String): String? =
+    localProps.getProperty(localKey) ?: System.getenv(envKey)
+
+val releaseStoreFile = releaseSetting("release.storeFile", "RELEASE_KEYSTORE_PATH")
+
 android {
     namespace = "com.mephilia.gallery"
     compileSdk {
@@ -20,18 +26,31 @@ android {
         // Android 11+ for MediaStore.createWriteRequest / createDeleteRequest
         minSdk = 30
         targetSdk = 37
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = releaseSetting("release.storePassword", "RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = releaseSetting("release.keyAlias", "RELEASE_KEY_ALIAS")
+                keyPassword = releaseSetting("release.keyPassword", "RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Unsigned by default, as F-Droid signs it. To install it directly on a phone,
-            // add signReleaseWithDebugKey=true to local.properties.
-            if (localProps.getProperty("signReleaseWithDebugKey") == "true") {
-                signingConfig = signingConfigs.getByName("debug")
+            // Signed with the release key when it's configured (GitHub releases), otherwise unsigned:
+            // F-Droid builds without any key and signs the APK itself.
+            signingConfig = when {
+                releaseStoreFile != null -> signingConfigs.getByName("release")
+                localProps.getProperty("signReleaseWithDebugKey") == "true" -> signingConfigs.getByName("debug")
+                else -> null
             }
             optimization {
                 enable = true

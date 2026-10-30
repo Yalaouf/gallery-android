@@ -147,6 +147,9 @@ fun SettingsSheet(onDismiss: () -> Unit) {
             SwitchRow(stringResource(R.string.confirm_delete), stringResource(R.string.confirm_delete_desc), s.confirmDelete) { v ->
                 AppSettings.update { it.copy(confirmDelete = v) }
             }
+            SwitchRow(stringResource(R.string.show_trash), stringResource(R.string.show_trash_desc), s.showTrash) { v ->
+                AppSettings.update { it.copy(showTrash = v) }
+            }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 SettingsTitle(stringResource(R.string.settings_media_management))

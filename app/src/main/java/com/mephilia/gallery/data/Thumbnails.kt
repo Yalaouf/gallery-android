@@ -10,6 +10,9 @@ import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.request.Options
 import coil3.size.pxOrElse
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.media.MediaMetadataRetriever
 
 /** System thumbnail (fast, cached by Android) for photos and videos. */
 data class Thumb(val item: MediaItem)
@@ -22,13 +25,33 @@ class ThumbFetcher(private val data: Thumb, private val options: Options) : Fetc
     override suspend fun fetch(): FetchResult {
         val w = options.size.width.pxOrElse { 512 }.coerceIn(64, 1024)
         val h = options.size.height.pxOrElse { 512 }.coerceIn(64, 1024)
-        val bitmap = options.context.contentResolver.loadThumbnail(data.item.uri, Size(w, h), null)
+        val bitmap = try {
+            options.context.contentResolver.loadThumbnail(data.item.uri, Size(w, h), null)
+        } catch (e: Exception) {
+            // No system thumbnail (e.g. trashed items): decode a small version ourselves
+            decodeSmall(w, h) ?: throw e
+        }
         return ImageFetchResult(
             image = bitmap.asImage(),
             isSampled = true,
             dataSource = DataSource.DISK,
         )
     }
+
+    private fun decodeSmall(w: Int, h: Int): Bitmap? = runCatching {
+        val context = options.context
+        if (data.item.isVideo) {
+            MediaMetadataRetriever().use { r ->
+                r.setDataSource(context, data.item.uri)
+                r.getScaledFrameAtTime(-1, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, w, h)
+            }
+        } else {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, data.item.uri)) { decoder, info, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                decoder.setTargetSampleSize(maxOf(1, minOf(info.size.width / w, info.size.height / h)))
+            }
+        }
+    }.getOrNull()
 
     class Factory : Fetcher.Factory<Thumb> {
         override fun create(data: Thumb, options: Options, imageLoader: ImageLoader): Fetcher =

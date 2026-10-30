@@ -14,13 +14,34 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 /** Clockwise quarter turns, then horizontal mirror, then a normalized crop in the displayed image. */
 data class PhotoEdits(
     val quarterTurns: Int = 0,
     val flipH: Boolean = false,
     val crop: Rect = Rect(0f, 0f, 1f, 1f),
+    /**
+     * Fine rotation in degrees (clockwise), applied after the quarter turns and the mirror.
+     * The image is zoomed in so the corners never show empty areas; [crop] is relative to that zoomed image.
+     */
+    val angle: Float = 0f,
 )
+
+/** Largest scale at which a w × h image, rotated by [angle] degrees, still covers a w × h frame. */
+fun straightenScale(w: Float, h: Float, angle: Float): Float {
+    if (angle == 0f) return 1f
+    val t = Math.toRadians(abs(angle).toDouble())
+    val c = cos(t).toFloat()
+    val s = sin(t).toFloat()
+    return min(w / (w * c + h * s), h / (w * s + h * c))
+}
 
 data class OutputFormat(val mime: String, val extension: String, val format: Bitmap.CompressFormat)
 
@@ -74,12 +95,41 @@ private fun sourceRect(edits: PhotoEdits): Rect {
 }
 
 fun Bitmap.applyEdits(edits: PhotoEdits): Bitmap {
+    if (edits.angle != 0f) return applyEditsWithAngle(edits)
     val r = sourceRect(edits)
     val x = (r.left * width).roundToInt().coerceIn(0, width - 1)
     val y = (r.top * height).roundToInt().coerceIn(0, height - 1)
     val w = (r.width * width).roundToInt().coerceIn(1, width - x)
     val h = (r.height * height).roundToInt().coerceIn(1, height - y)
     return Bitmap.createBitmap(this, x, y, w, h, editMatrix(edits), true)
+}
+
+/** Single-pass render: quarter turns, mirror, fine rotation with zoom, then crop. */
+private fun Bitmap.applyEditsWithAngle(edits: PhotoEdits): Bitmap {
+    val turned = edits.quarterTurns.mod(2) == 1
+    val dw = (if (turned) height else width).toFloat()
+    val dh = (if (turned) width else height).toFloat()
+    // A 2 px safety margin keeps filtered edge pixels from bleeding in as a thin dark line
+    val scale = straightenScale(dw, dh, edits.angle) * (1f - 2f / min(dw, dh))
+    val fw = dw * scale
+    val fh = dh * scale
+    val outW = (edits.crop.width * fw).roundToInt().coerceAtLeast(1)
+    val outH = (edits.crop.height * fh).roundToInt().coerceAtLeast(1)
+
+    val m = Matrix()
+    m.postRotate(90f * edits.quarterTurns.mod(4))
+    val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat()).also { m.mapRect(it) }
+    m.postTranslate(-bounds.left, -bounds.top)
+    if (edits.flipH) {
+        m.postScale(-1f, 1f)
+        m.postTranslate(dw, 0f)
+    }
+    m.postRotate(edits.angle, dw / 2, dh / 2)
+    m.postTranslate(-(dw - fw) / 2 - edits.crop.left * fw, -(dh - fh) / 2 - edits.crop.top * fh)
+
+    val out = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+    Canvas(out).drawBitmap(this, m, Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG))
+    return out
 }
 
 /** Full-resolution render. EXIF data is kept for JPEG output. */

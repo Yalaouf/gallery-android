@@ -58,6 +58,12 @@ class MediaAccess internal constructor(private val context: Context) {
         return ask(MediaStore.createTrashRequest(context.contentResolver, uris, true))
     }
 
+    /** Takes items out of the trash. Returns false if the user declines. */
+    suspend fun restore(uris: List<Uri>): Boolean {
+        if (direct { uris.forEach { update(it, MediaStore.MediaColumns.IS_TRASHED, 0) } }) return true
+        return ask(MediaStore.createTrashRequest(context.contentResolver, uris, false))
+    }
+
     /** Deletes permanently. Returns false if the user declines. */
     suspend fun delete(uris: List<Uri>): Boolean {
         if (canManageMedia && direct { uris.forEach { context.contentResolver.delete(it, null, null) } }) return true

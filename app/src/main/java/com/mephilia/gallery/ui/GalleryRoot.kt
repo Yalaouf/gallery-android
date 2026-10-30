@@ -58,6 +58,8 @@ import com.mephilia.gallery.ui.screens.ViewerScreen
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 import com.mephilia.gallery.ui.editor.GifEditorScreen
+import com.mephilia.gallery.ui.screens.TrashScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 sealed interface Route {
     val key: String
@@ -80,6 +82,14 @@ sealed interface Route {
 
     data class EditVideo(val item: MediaItem) : Route {
         override val key = "edit-video/${item.id}"
+    }
+
+    data object Trash : Route {
+        override val key = "trash"
+    }
+
+    data class TrashViewer(val startId: Long) : Route {
+        override val key = "trash-viewer/$startId"
     }
 
     data class EditGif(val item: MediaItem) : Route {
@@ -177,6 +187,7 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                     onRequestAccess = { launcher.launch(mediaPermissions) },
                     onOpenMedia = { nav.push(Route.Viewer(null, it.id)) },
                     onOpenAlbum = { nav.push(Route.Album(it.id, it.name)) },
+                    onOpenTrash = { nav.push(Route.Trash) },
                 )
                 is Route.Album -> AlbumScreen(
                     vm = vm,
@@ -194,6 +205,19 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                         nav.push(editRouteFor(item))
                     },
                 )
+                Route.Trash -> TrashScreen(vm = vm, onBack = back, onOpen = { nav.push(Route.TrashViewer(it.id)) })
+                is Route.TrashViewer -> {
+                    val trash by vm.trash.collectAsStateWithLifecycle()
+                    ViewerScreen(
+                        vm = vm,
+                        bucketId = null,
+                        startId = route.startId,
+                        onBack = back,
+                        onEdit = {},
+                        items = trash,
+                        trashMode = true,
+                    )
+                }
                 is Route.EditPhoto -> PhotoEditorScreen(item = route.item, onClose = back)
                 is Route.EditVideo -> VideoEditorScreen(item = route.item, onClose = back)
                 is Route.EditGif -> GifEditorScreen(item = route.item, onClose = back)

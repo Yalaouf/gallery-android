@@ -20,6 +20,8 @@ data class MediaItem(
     val bucketId: Long,
     val bucketName: String,
     val relativePath: String,
+    /** For trashed items, when Android deletes them for good (ms); 0 otherwise. */
+    val expiresAt: Long = 0,
 )
 
 data class Album(

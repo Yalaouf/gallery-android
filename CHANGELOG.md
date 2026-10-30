@@ -3,7 +3,28 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
-## [1.2] — unreleased
+## [1.3] — 2026-10-30
+
+### Added
+- **Trash**: a Trash folder at the end of the Albums tab lists deleted items with the days left before Android
+  removes them. Restore them, delete them for good, or empty the trash. It can be hidden in Settings.
+- **Signed APKs on GitHub**: each version is published on the Releases page, signed with a release key.
+- **Straighten** photos and GIFs by any angle (−45° to 45°) with a slider, on top of the 90° turns.
+  The image zooms in automatically so no empty corners show; the preview updates live.
+- **Search in the Albums tab**: filters folders by name as you type (ignores case and accents).
+- **30 and 50 fps** for GIF export. 50 fps is the GIF maximum: frame delays are stored in
+  hundredths of a second, and players slow down anything shorter than 2/100 s.
+
+### Changed
+- **Better GIF quality**: Floyd–Steinberg error diffusion instead of ordered dithering, and a finer,
+  refined palette. Gradients are smoother and color blotches are gone (perceived error halved
+  on natural gradients), for files about 5–10% larger.
+- GIF export now defaults to 15 fps.
+- **Instant refresh**: deleting, replacing, moving or copying updates the screen right away instead of
+  waiting for Android's change notification. A replaced photo fades from the old to the new version
+  with no black frame or second reload, and deleted items vanish without a fade-out.
+
+## [1.2] — 2026-10-30
 
 ### Added
 - **Export videos as animated GIFs** (up to 15 seconds), using the current trim, crop, rotation and mirror.
@@ -45,6 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - English and French, following the system language.
 - No internet permission, no trackers.
 
-[1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1...HEAD
+[1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.2...v1.3
+[1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1...v1.2
 [1.1]: https://github.com/Yalaouf/gallery-android/compare/v1.0...v1.1
 [1.0]: https://github.com/Yalaouf/gallery-android/releases/tag/v1.0

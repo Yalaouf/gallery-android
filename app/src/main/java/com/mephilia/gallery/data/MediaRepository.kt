@@ -2,6 +2,7 @@ package com.mephilia.gallery.data
 
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.os.Bundle
 import android.content.Context
 import android.database.ContentObserver
 import android.os.Handler
@@ -81,7 +82,12 @@ class MediaRepository(context: Context) {
         item
     }
 
-    suspend fun loadAll(): List<MediaItem> = withContext(Dispatchers.IO) {
+    suspend fun loadAll(): List<MediaItem> = load(trashed = false)
+
+    /** Items in Android's trash, soonest to expire first. */
+    suspend fun loadTrash(): List<MediaItem> = load(trashed = true).sortedBy { it.expiresAt }
+
+    private suspend fun load(trashed: Boolean): List<MediaItem> = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             MediaStore.Files.FileColumns._ID,
             MediaStore.Files.FileColumns.MEDIA_TYPE,
@@ -97,6 +103,7 @@ class MediaRepository(context: Context) {
             MediaStore.MediaColumns.BUCKET_ID,
             MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
             MediaStore.MediaColumns.RELATIVE_PATH,
+            MediaStore.MediaColumns.DATE_EXPIRES,
         )
         val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
         val args = arrayOf(
@@ -104,11 +111,14 @@ class MediaRepository(context: Context) {
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
         )
         val items = ArrayList<MediaItem>()
-        resolver.query(
-            MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
-            projection, selection, args,
-            "${MediaStore.MediaColumns.DATE_MODIFIED} DESC",
-        )?.use { c ->
+        val queryArgs = Bundle().apply {
+            putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, args)
+            putString(ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "${MediaStore.MediaColumns.DATE_MODIFIED} DESC")
+            // Trashed items are excluded from queries unless asked for explicitly
+            putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, if (trashed) MediaStore.MATCH_ONLY else MediaStore.MATCH_EXCLUDE)
+        }
+        resolver.query(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), projection, queryArgs, null)?.use { c ->
             val idCol = c.getColumnIndexOrThrow(projection[0])
             val typeCol = c.getColumnIndexOrThrow(projection[1])
             val nameCol = c.getColumnIndexOrThrow(projection[2])
@@ -123,6 +133,7 @@ class MediaRepository(context: Context) {
             val bucketCol = c.getColumnIndexOrThrow(projection[11])
             val bucketNameCol = c.getColumnIndexOrThrow(projection[12])
             val pathCol = c.getColumnIndexOrThrow(projection[13])
+            val expiresCol = c.getColumnIndexOrThrow(projection[14])
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
                 val isVideo = c.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -147,6 +158,7 @@ class MediaRepository(context: Context) {
                     bucketName = c.getString(bucketNameCol)
                         ?: c.getString(pathCol)?.trimEnd('/')?.substringAfterLast('/').orEmpty(),
                     relativePath = c.getString(pathCol) ?: "",
+                    expiresAt = c.getLong(expiresCol) * 1000,
                 )
             }
         }

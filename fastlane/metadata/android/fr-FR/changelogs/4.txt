@@ -1,0 +1,6 @@
+Nouveautés de la 1.3 :
+• Corbeille : restaurez ou supprimez définitivement (masquable dans les Réglages)
+• Redressez photos et GIF selon n'importe quel angle, avec zoom automatique
+• Export GIF à 30 et 50 img/s, et GIF de meilleure qualité
+• Recherche dans l'onglet Albums
+• Affichage mis à jour instantanément après suppression, remplacement ou déplacement

@@ -29,6 +29,7 @@ data class Settings(
     val jpegQuality: Int = 95,
     val keepLocation: Boolean = true,
     val confirmDelete: Boolean = true,
+    val showTrash: Boolean = true,
 )
 
 /** App settings shared by all screens, persisted on every change. */
@@ -55,6 +56,7 @@ object AppSettings {
             jpegQuality = sp.getInt("jpeg_quality", d.jpegQuality),
             keepLocation = sp.getBoolean("keep_location", d.keepLocation),
             confirmDelete = sp.getBoolean("confirm_delete", d.confirmDelete),
+            showTrash = sp.getBoolean("show_trash", d.showTrash),
         )
     }
 
@@ -85,6 +87,7 @@ object AppSettings {
             .putInt("jpeg_quality", s.jpegQuality)
             .putBoolean("keep_location", s.keepLocation)
             .putBoolean("confirm_delete", s.confirmDelete)
+            .putBoolean("show_trash", s.showTrash)
             .apply()
     }
 }

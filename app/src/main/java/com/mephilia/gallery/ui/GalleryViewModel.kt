@@ -20,12 +20,21 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import com.mephilia.gallery.data.MediaEvents
+import kotlinx.coroutines.flow.update
+import com.mephilia.gallery.data.AppSettings
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 
 class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = MediaRepository(app)
     private val prefs = Prefs(app)
 
     private val all = MutableStateFlow<List<MediaItem>>(emptyList())
+    val trash = MutableStateFlow<List<MediaItem>>(emptyList())
+    /** When the app last replaced each file, by id. */
+    private val replacedAt = HashMap<Long, Long>()
     val loading = MutableStateFlow(true)
 
     val mediaSort = MutableStateFlow(prefs.mediaSort)
@@ -70,19 +79,55 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
 
     private var started = false
 
+    init {
+        viewModelScope.launch {
+            AppSettings.flow.map { it.showTrash }.distinctUntilChanged().drop(1).collect { reloadTrash() }
+        }
+        viewModelScope.launch {
+            MediaEvents.events.collect { event ->
+                when (event) {
+                    is MediaEvents.Event.Removed -> {
+                        all.update { list -> list.filter { it.id !in event.ids } }
+                        trash.update { list -> list.filter { it.id !in event.ids } }
+                        reloadTrash()
+                    }
+                    // A new dateModified changes the image cache keys, so the new content is loaded right away
+                    is MediaEvents.Event.Replaced -> {
+                        val now = System.currentTimeMillis()
+                        replacedAt[event.id] = now
+                        all.update { list -> list.map { if (it.id == event.id) it.copy(dateModified = now) else it } }
+                    }
+                    MediaEvents.Event.Changed -> reload()
+                }
+            }
+        }
+    }
+
     @OptIn(FlowPreview::class)
     fun start() {
         if (started) return
         started = true
         viewModelScope.launch {
             reload()
-            repo.changes().debounce(400).collect { reload() }
+            repo.changes().debounce(150).collect { reload() }
+        }
+    }
+
+    fun reloadTrash() {
+        viewModelScope.launch {
+            trash.value = if (AppSettings.current.showTrash) repo.loadTrash() else emptyList()
         }
     }
 
     fun reload() {
+        reloadTrash()
         viewModelScope.launch {
-            all.value = repo.loadAll()
+            all.value = repo.loadAll().map { item ->
+                // MediaStore dates have 1 s precision: keep our more precise replace time unless the file
+                // changed again since, otherwise the image cache key flips and the picture reloads (black flash)
+                val replaced = replacedAt[item.id]
+                if (replaced != null && replaced > item.dateModified) item.copy(dateModified = replaced) else item
+            }
             loading.value = false
         }
     }

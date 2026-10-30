@@ -179,8 +179,8 @@
     <string name="gif_size_small">Petite</string>
     <string name="gif_size_medium">Moyenne</string>
     <string name="gif_size_large">Grande</string>
-    <string name="gif_smoothness">Fluidité</string>
-    <string name="gif_fps">%1$d img/s</string>
+    <string name="gif_smoothness">Fluidité (images par seconde)</string>
+    <string name="gif_fps">%1$d</string>
     <string name="gif_summary">%1$d px · %2$s · %3$d images. Le GIF est enregistré comme nouvelle image, la vidéo n\'est pas modifiée.</string>
     <string name="gif_export">Exporter</string>
     <string name="gif_creating">Création du GIF…</string>
@@ -197,4 +197,28 @@
     <string name="sort_recent">Récents</string>
     <string name="create_folder_named">Créer le dossier « %1$s »</string>
     <string name="share_to_edit">Modifier avec Galerie</string>
+    <string name="tool_straighten">Redresser</string>
+    <string name="angle_degrees">%1$.1f°</string>
+    <string name="search_albums">Rechercher un album</string>
+    <string name="no_album_match">Aucun album ne correspond à « %1$s »</string>
+
+    <string name="trash_title">Corbeille</string>
+    <string name="trash_empty">La corbeille est vide</string>
+    <string name="trash_info">Les éléments sont supprimés définitivement au bout de 30 jours.</string>
+    <string name="action_restore">Restaurer</string>
+    <string name="action_delete_forever">Supprimer</string>
+    <string name="action_empty_trash">Vider la corbeille</string>
+    <plurals name="delete_forever_title">
+        <item quantity="one">Supprimer définitivement %d élément ?</item>
+        <item quantity="many">Supprimer définitivement %d éléments ?</item>
+        <item quantity="other">Supprimer définitivement %d éléments ?</item>
+    </plurals>
+    <string name="delete_forever_text">Cette action est irréversible.</string>
+    <plurals name="days_left">
+        <item quantity="one">%d j</item>
+        <item quantity="many">%d j</item>
+        <item quantity="other">%d j</item>
+    </plurals>
+    <string name="show_trash">Afficher la corbeille</string>
+    <string name="show_trash_desc">Comme un dossier dans l\'onglet Albums</string>
 </resources>

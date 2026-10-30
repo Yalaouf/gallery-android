@@ -42,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   when the other app (e.g. the screenshot tool) already allowed it.
 - Files are flushed to storage when saved, so a save can't leave an empty file if the phone shuts down right after.
 
-## [1.1] — 2026-10-30
+## [1.1] — 2026-10-29
 
 ### Changed
 - Trim, crop and rotate can be combined in one editing session:
@@ -50,7 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The video preview shows the cropped result while trimming or rotating.
 - A dot on the video tools shows which edits are active.
 
-## [1.0] — 2026-10-30
+## [1.0] — 2026-10-29
 
 ### Added
 - Photos view grouped by day, with sorting (date, name, size, random), filtering (photos/videos) and 2–6 columns.

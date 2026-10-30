@@ -49,7 +49,11 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # The default package list includes the obsolete "tools" package, which recent sdkmanager versions
+      # can't find. The Android platform and build-tools are downloaded by Gradle as needed.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - uses: gradle/actions/setup-gradle@v4
 

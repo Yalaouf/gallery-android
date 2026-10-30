@@ -4,7 +4,7 @@ A fast, private photo & video gallery for Android, with photo, GIF and video edi
 No ads, no trackers, no internet access.
 
 > [!NOTE]
-> This app was fully vibecoded at the very beginning: the initial version was written entirely
+> This app was fully vibecoded from the very beginning
 > by an AI coding assistant (Claude Code), from my descriptions of what I wanted.
 
 <p>

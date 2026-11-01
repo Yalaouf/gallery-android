@@ -2,6 +2,7 @@ package com.mephilia.gallery.data
 
 import java.io.Closeable
 import java.io.OutputStream
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -16,6 +17,12 @@ class GifEncoder(
     private val width: Int,
     private val height: Int,
     loop: Boolean = true,
+    /** Share of the quantization error that is diffused (tuning, exposed for tests). */
+    internal val ditherStrength: Float = STRENGTH,
+    /** Number of k-means passes refining the median-cut palette (tuning, exposed for tests). */
+    internal val refinePasses: Int = 3,
+    /** Lighter dithering on edges, where grain blurs details (tuning, exposed for tests). */
+    internal val edgeAware: Boolean = true,
 ) : Closeable {
 
     init {
@@ -101,7 +108,7 @@ class GifEncoder(
         for (k in histogram.indices) if (histogram[k] > 0) colors[n++] = k
 
         buildPalette(colors, if (hasTransparency) 255 else 256)
-        refinePalette(colors)
+        repeat(refinePasses) { refinePalette(colors) }
         transparentIndex = if (hasTransparency) paletteSize else -1
 
         val palette = ByteArray(768)
@@ -203,13 +210,29 @@ class GifEncoder(
                         nearestCache[key] = idx
                     }
                     indices[i] = idx.toByte()
-                    diffuse(e, dir, (r - palR[idx]) * STRENGTH, (g - palG[idx]) * STRENGTH, (b - palB[idx]) * STRENGTH)
+                    val k = if (edgeAware) ditherStrength * edgeFactor(argb, x, y) else ditherStrength
+                    diffuse(e, dir, (r - palR[idx]) * k, (g - palG[idx]) * k, (b - palB[idx]) * k)
                 }
                 x += dir
             }
             val t = errCur; errCur = errNext; errNext = t
             errNext.fill(0f)
         }
+    }
+
+    /**
+     * 1 in smooth areas (full dithering hides banding), down to [MIN_EDGE_FACTOR] on sharp edges
+     * such as text and outlines, where dithering only adds grain.
+     */
+    private fun edgeFactor(argb: IntArray, x: Int, y: Int): Float {
+        val i = y * width + x
+        val l = luma(argb[i])
+        var contrast = 0
+        if (x + 1 < width) contrast = maxOf(contrast, abs(l - luma(argb[i + 1])))
+        if (x > 0) contrast = maxOf(contrast, abs(l - luma(argb[i - 1])))
+        if (y + 1 < height) contrast = maxOf(contrast, abs(l - luma(argb[i + width])))
+        if (y > 0) contrast = maxOf(contrast, abs(l - luma(argb[i - width])))
+        return (1f - contrast / EDGE_CONTRAST).coerceIn(MIN_EDGE_FACTOR, 1f)
     }
 
     /** Spreads the error to the next pixel (7/16) and to the row below (3/16, 5/16, 1/16), following [dir]. */
@@ -345,6 +368,12 @@ class GifEncoder(
     companion object {
         /** Share of the error that is diffused; slightly below 1 to limit grain and frame-to-frame shimmer. */
         private const val STRENGTH = 0.85f
+
+        /** Neighbour luma difference (0-255) above which a pixel counts as a full edge. */
+        private const val EDGE_CONTRAST = 48f
+        private const val MIN_EDGE_FACTOR = 0.2f
+
+        private fun luma(p: Int) = (((p shr 16) and 0xFF) * 299 + ((p shr 8) and 0xFF) * 587 + (p and 0xFF) * 114) / 1000
 
         private fun key6(r: Int, g: Int, b: Int) = ((r shr 2) shl 12) or ((g shr 2) shl 6) or (b shr 2)
 

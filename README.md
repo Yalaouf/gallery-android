@@ -39,7 +39,7 @@ An F-Droid release is planned.
 **Browse**
 - **Photos**: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns
 - **Albums**: your folders, sorted by date modified, date created or name, with a search bar
-- Full-screen viewer with pinch and double-tap zoom, video playback and animated GIFs
+- Full-screen viewer with pinch and double-tap zoom, animated GIFs, and a video player with its own controls
 - Videos start muted in split screen, so the other app (e.g. YouTube) keeps playing
 
 **Organize**
@@ -52,7 +52,7 @@ An F-Droid release is planned.
 - **Photos**: crop (free or fixed ratios), rotate, **straighten by any angle** (with automatic zoom so no empty corners show), mirror
 - **GIFs**: the same tools, plus speed (0.25× to 4×) and looping
 - **Videos**: trim with a live preview, crop, rotate, mirror
-- **Video to GIF**: export up to 15 seconds as an animated GIF, at the video's speed, 10 to 50 fps
+- **Video to GIF**: export up to 15 seconds as an animated GIF, at the video's speed, 10 to 50 fps, up to 1080 px
 - Save as a copy or replace the original: ask each time or set a default, separately for photos and videos
 - Keeps photo EXIF data (date, camera, and optionally the GPS location)
 - Opens images and videos from other apps: "Edit with", "Open with", and "Edit with Gallery" in the share menu

@@ -3,6 +3,23 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
+## [1.4] — 2026-11-01
+
+### Fixed
+- **Stretched photo after cropping**: right after replacing a photo with a smaller (cropped) version, the viewer drew it
+  with the old size until it was reopened. The image now takes its new size immediately.
+- **Video controls covered by the action bar**: the player's built-in controls sat under the Share / Edit / Move bar,
+  so pausing or moving the progress bar could fail. The viewer now has its own controls (play/pause, progress bar
+  and time), laid out right above the action bar. A tap shows or hides everything together, and the controls
+  hide after 3 seconds of playback.
+
+### Changed
+- **Sharper GIFs**: edge-aware dithering (full dithering in smooth areas, much less on text and outlines) and a
+  better-refined palette. On a detail test image, errors on details drop by 6% and on text by 12%, with gradients
+  just as smooth.
+- **Video to GIF**: frames are reduced in sharp halving steps instead of a single bilinear resize, and the sizes are
+  now 320, 480, 720 and 1080 px (was up to 640). A note warns that large GIFs are heavy.
+
 ## [1.3] — 2026-10-30
 
 ### Added
@@ -74,6 +91,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.3...v1.4
 [1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.2...v1.3
 [1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1...v1.2
 [1.1]: https://github.com/Yalaouf/gallery-android/compare/v1.0...v1.1

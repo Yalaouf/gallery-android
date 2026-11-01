@@ -60,7 +60,7 @@ import com.mephilia.gallery.data.MediaEvents
 /** Longer GIFs get too heavy. */
 const val GIF_MAX_DURATION_MS = 15_000L
 
-private val GIF_SIZES = listOf(320, 480, 640)
+private val GIF_SIZES = listOf(320, 480, 720, 1080)
 // 50 fps is the GIF maximum: frame delays are stored in hundredths of a second,
 // and players slow down delays under 2 cs (60 fps would play about 4× too slowly)
 private val GIF_FPS = listOf(10, 15, 30, 50)
@@ -91,7 +91,8 @@ suspend fun exportGif(
     val shownH = if (turned) info.width else info.height
     val cropLongest = max(edits.crop.width * shownW, edits.crop.height * shownH).coerceAtLeast(1f)
     val fullLongest = max(info.width, info.height)
-    val request = (fullLongest * maxSide / cropLongest).roundToInt().coerceIn(1, fullLongest)
+    // Twice the needed size, so the final reduction can be done by sharp halving steps (see scaleDownSmooth)
+    val request = (fullLongest * 2f * maxSide / cropLongest).roundToInt().coerceIn(1, fullLongest)
 
     MediaMetadataRetriever().use { retriever ->
         retriever.setDataSource(context, uri)
@@ -115,7 +116,7 @@ suspend fun exportGif(
                     encoder = GifEncoder(os, outW, outH, loop)
                     pixels = IntArray(outW * outH)
                 }
-                val scaled = Bitmap.createScaledBitmap(edited, outW, outH, true)
+                val scaled = edited.scaleDownSmooth(outW, outH)
                 scaled.getPixels(pixels, 0, outW, 0, 0, outW, outH)
                 // Cumulative rounding of the hundredths keeps the overall speed exact
                 val delayCs = ((i + 1) * 100.0 / fps).roundToInt() - (i * 100.0 / fps).roundToInt()
@@ -127,6 +128,24 @@ suspend fun exportGif(
         }
     }
     out
+}
+
+/**
+ * High-quality reduction: halves the size while it's more than twice the target (each halving averages
+ * 2×2 pixels), then a final bilinear step. A single bilinear step over a large ratio skips pixels and
+ * loses fine details. May return this bitmap when it already has the target size.
+ */
+private fun Bitmap.scaleDownSmooth(targetW: Int, targetH: Int): Bitmap {
+    var current = this
+    while (current.width >= targetW * 2 && current.height >= targetH * 2) {
+        val half = Bitmap.createScaledBitmap(current, current.width / 2, current.height / 2, true)
+        if (current !== this) current.recycle()
+        current = half
+    }
+    if (current.width == targetW && current.height == targetH) return current
+    val result = Bitmap.createScaledBitmap(current, targetW, targetH, true)
+    if (current !== this && current !== result) current.recycle()
+    return result
 }
 
 /**
@@ -202,15 +221,14 @@ fun GifExportFlow(
                 Column {
                     Text(stringResource(R.string.gif_size), style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
-                    val sizeLabels = listOf(R.string.gif_size_small, R.string.gif_size_medium, R.string.gif_size_large)
                     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                        GIF_SIZES.forEachIndexed { i, _ ->
+                        GIF_SIZES.forEachIndexed { i, px ->
                             SegmentedButton(
                                 selected = sizeIndex == i,
                                 onClick = { sizeIndex = i },
                                 shape = SegmentedButtonDefaults.itemShape(i, GIF_SIZES.size),
                                 icon = {},
-                            ) { Text(stringResource(sizeLabels[i]), maxLines = 1) }
+                            ) { Text("$px", maxLines = 1) }
                         }
                     }
                     Spacer(Modifier.height(16.dp))
@@ -252,6 +270,14 @@ fun GifExportFlow(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (GIF_SIZES[sizeIndex] >= 720) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            stringResource(R.string.gif_heavy_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
+                    }
                 }
             },
             confirmButton = { TextButton(onClick = ::start) { Text(stringResource(R.string.gif_export)) } },

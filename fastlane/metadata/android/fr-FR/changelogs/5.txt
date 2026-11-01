@@ -1,0 +1,4 @@
+Nouveautés de la 1.4 :
+• Correction d'une photo déformée juste après un recadrage
+• Lecteur vidéo : nouvelles commandes, jamais cachées par la barre d'actions
+• GIF plus nets : détails et texte plus propres, tailles jusqu'à 1080 px

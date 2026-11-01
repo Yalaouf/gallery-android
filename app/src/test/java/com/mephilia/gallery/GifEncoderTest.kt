@@ -72,4 +72,23 @@ class GifEncoderTest {
         GifEncoder(bytes, img.width, img.height).use { it.addFrame(px, 10) }
         File("build/test-gifs").apply { mkdirs() }.resolve("plasma.gif").writeBytes(bytes.toByteArray())
     }
+
+    /** Encodes the detail-rich fixture with several encoder settings, for comparison with an external script. */
+    @Test
+    fun writesTuningSamples() {
+        val img = javax.imageio.ImageIO.read(javaClass.classLoader!!.getResourceAsStream("gif/detail.png"))
+        val px = IntArray(img.width * img.height)
+        img.getRGB(0, 0, img.width, img.height, px, 0, img.width)
+        val dir = File("build/test-gifs/tuning").apply { mkdirs() }
+        for (strength in listOf(0.5f, 0.7f, 0.85f, 1f)) {
+            for (passes in listOf(1, 3)) {
+                for (edgeAware in listOf(false, true)) {
+                    val bytes = ByteArrayOutputStream()
+                    GifEncoder(bytes, img.width, img.height, ditherStrength = strength, refinePasses = passes, edgeAware = edgeAware)
+                        .use { it.addFrame(px, 10) }
+                    File(dir, "s${(strength * 100).toInt()}-k$passes${if (edgeAware) "-edge" else ""}.gif").writeBytes(bytes.toByteArray())
+                }
+            }
+        }
+    }
 }

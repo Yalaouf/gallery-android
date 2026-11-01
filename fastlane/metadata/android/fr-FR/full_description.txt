@@ -17,7 +17,7 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <b>Retoucher</b>
 <ul>
 <li>Photos : recadrage (libre ou format fixe), rotation, redressement selon n'importe quel angle, miroir. Les informations de la photo (date, appareil, position) sont conservées.</li>
-<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir, et export des extraits courts (jusqu'à 15 secondes) en GIF animé, jusqu'à 50 images par seconde.</li>
+<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir, et export des extraits courts (jusqu'à 15 secondes) en GIF animé, jusqu'à 50 images par seconde et 1080 px.</li>
 <li>GIF : recadrage, rotation, miroir, vitesse et boucle. Les GIF animés sont lus dans la visionneuse.</li>
 <li>Ouvrez et modifiez des images depuis d'autres applications (Modifier avec, Ouvrir avec, Partager).</li>
 <li>Enregistrez une copie ou remplacez l'original. Choisissez à chaque fois, ou définissez un choix par défaut, séparément pour les photos et les vidéos.</li>

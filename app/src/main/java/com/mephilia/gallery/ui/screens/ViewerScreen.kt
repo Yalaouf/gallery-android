@@ -2,7 +2,6 @@ package com.mephilia.gallery.ui.screens
 
 import android.app.Activity
 import android.text.format.Formatter
-import android.view.View
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -94,6 +93,16 @@ import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 import kotlinx.coroutines.flow.flowOf
 import com.mephilia.gallery.data.MediaEvents
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.delay
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,6 +145,8 @@ fun ViewerScreen(
     LaunchedEffect(multiWindow) { if (multiWindow) muted = true }
     var showInfo by remember { mutableStateOf(false) }
     var showMove by remember { mutableStateOf(false) }
+    var bottomBarHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
     var confirmTrash by remember { mutableStateOf(false) }
     val albums by vm.albums.collectAsStateWithLifecycle()
     val current = list.getOrNull(pager.currentPage.coerceIn(0, list.lastIndex)) ?: list.first()
@@ -159,7 +170,10 @@ fun ViewerScreen(
                     item = item,
                     active = pager.settledPage == page,
                     muted = muted,
-                    onControllerVisibility = { showBars = it },
+                    showControls = showBars,
+                    controlsBottomPadding = bottomBarHeight,
+                    onTap = { showBars = !showBars },
+                    onAutoHide = { showBars = false },
                 )
             } else {
                 PhotoPage(item = item, onTap = { showBars = !showBars })
@@ -205,15 +219,20 @@ fun ViewerScreen(
                 access = access,
                 onSelectAll = null,
                 onDone = {},
-                modifier = Modifier.navigationBarsPadding().padding(bottom = if (current.isVideo) 80.dp else 16.dp),
+                modifier = Modifier
+                    .onSizeChanged { bottomBarHeight = with(density) { it.height.toDp() } + 16.dp }
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp),
             )
         } else AnimatedVisibility(showBars, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
             Row(
                 Modifier
                     .fillMaxWidth()
+                    // Measured so the video controls sit right above it instead of under it
+                    .onSizeChanged { bottomBarHeight = with(density) { it.height.toDp() } }
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
                     .navigationBarsPadding()
-                    .padding(top = 24.dp, bottom = if (current.isVideo) 72.dp else 8.dp),
+                    .padding(top = 24.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 ViewerAction(Icons.Rounded.Share, stringResource(R.string.action_share)) { shareMedia(context, listOf(current)) }
@@ -300,9 +319,21 @@ private fun PhotoPage(item: MediaItem, onTap: () -> Unit) {
     }
 }
 
+/**
+ * Video page with its own controls (play/pause, progress, time) instead of PlayerView's: they are laid out
+ * right above the viewer's action bar ([controlsBottomPadding]), so the two can never overlap.
+ */
 @OptIn(UnstableApi::class)
 @Composable
-private fun VideoPage(item: MediaItem, active: Boolean, muted: Boolean, onControllerVisibility: (Boolean) -> Unit) {
+private fun VideoPage(
+    item: MediaItem,
+    active: Boolean,
+    muted: Boolean,
+    showControls: Boolean,
+    controlsBottomPadding: Dp,
+    onTap: () -> Unit,
+    onAutoHide: () -> Unit,
+) {
     if (!active) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             AsyncImage(Thumb(item), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
@@ -323,20 +354,116 @@ private fun VideoPage(item: MediaItem, active: Boolean, muted: Boolean, onContro
     }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(player, muted) { player.setMuted(muted) }
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                this.player = player
-                setShowNextButton(false)
-                setShowPreviousButton(false)
-                setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { v ->
-                    onControllerVisibility(v == View.VISIBLE)
-                })
+
+    var isPlaying by remember { mutableStateOf(player.isPlaying) }
+    var position by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(0L) }
+    // While the progress bar is dragged, show the drag position rather than the player's
+    var dragPosition by remember { mutableStateOf<Long?>(null) }
+    // Bumped on every interaction, to restart the auto-hide delay
+    var interactions by remember { mutableIntStateOf(0) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
             }
-        },
-        update = { it.player = player },
-        modifier = Modifier.fillMaxSize(),
-    )
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+    LaunchedEffect(player) {
+        while (true) {
+            position = player.currentPosition
+            duration = player.duration.coerceAtLeast(0L)
+            delay(200)
+        }
+    }
+    LaunchedEffect(showControls, isPlaying, interactions, dragPosition) {
+        if (showControls && isPlaying && dragPosition == null) {
+            delay(3000)
+            onAutoHide()
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = false
+                    this.player = player
+                }
+            },
+            update = { it.player = player },
+            modifier = Modifier.fillMaxSize(),
+        )
+        // Tapping the video shows or hides all the controls together
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onTap),
+        )
+        AnimatedVisibility(showControls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.Center)) {
+            Box(
+                Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable {
+                        interactions++
+                        if (player.isPlaying) {
+                            player.pause()
+                        } else {
+                            if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
+                            player.play()
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    stringResource(if (isPlaying) R.string.pause else R.string.play),
+                    tint = Color.White,
+                    modifier = Modifier.size(44.dp),
+                )
+            }
+        }
+        AnimatedVisibility(
+            showControls,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = controlsBottomPadding),
+        ) {
+            val shown = dragPosition ?: position
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(formatDuration(shown), color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = if (duration > 0) shown.toFloat() / duration else 0f,
+                    onValueChange = { f ->
+                        if (dragPosition == null) player.setScrubbingModeEnabled(true)
+                        val target = (f * duration).toLong()
+                        dragPosition = target
+                        player.seekTo(target)
+                    },
+                    onValueChangeFinished = {
+                        player.setScrubbingModeEnabled(false)
+                        dragPosition = null
+                        interactions++
+                    },
+                    enabled = duration > 0,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                    ),
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                )
+                Text(formatDuration(duration), color = Color.White, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
 }
 
 @Composable

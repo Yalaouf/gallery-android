@@ -17,7 +17,7 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <b>Edit</b>
 <ul>
 <li>Photos: crop (free or fixed ratio), rotate, straighten by any angle, mirror. Photo details (date, camera, location) are kept.</li>
-<li>Videos: trim with a live preview, crop, rotate, mirror, and export short clips (up to 15 seconds) as animated GIFs, up to 50 fps.</li>
+<li>Videos: trim with a live preview, crop, rotate, mirror, and export short clips (up to 15 seconds) as animated GIFs, up to 50 fps and 1080 px.</li>
 <li>GIFs: crop, rotate, mirror, change speed and looping. Animated GIFs play in the viewer.</li>
 <li>Open and edit images from other apps (Edit with, Open with, Share).</li>
 <li>Save as a copy or replace the original. Choose each time, or set a default, separately for photos and videos.</li>

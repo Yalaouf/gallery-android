@@ -168,10 +168,7 @@
 
     <string name="gif_button">Export as GIF</string>
     <string name="gif_title">Export as GIF</string>
-    <string name="gif_size">Size</string>
-    <string name="gif_size_small">Small</string>
-    <string name="gif_size_medium">Medium</string>
-    <string name="gif_size_large">Large</string>
+    <string name="gif_size">Size (longest side, in pixels)</string>
     <string name="gif_smoothness">Smoothness (frames per second)</string>
     <string name="gif_fps">%1$d</string>
     <string name="gif_summary">%1$d px · %2$s · %3$d frames. The GIF is saved as a new image, the video is not changed.</string>
@@ -213,4 +210,6 @@
     <string name="show_trash">Show the trash</string>
     <string name="show_trash_desc">As a folder in the Albums tab</string>
     <string name="gif_open_failed">This GIF can\'t be opened</string>
+    <string name="pause">Pause</string>
+    <string name="gif_heavy_warning">Large GIFs can weigh tens of megabytes and take a few minutes to create.</string>
 </resources>

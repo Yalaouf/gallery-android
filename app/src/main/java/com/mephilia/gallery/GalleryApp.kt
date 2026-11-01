@@ -4,6 +4,7 @@ import android.app.Application
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.compose.preferEndFirstIntrinsicSize
 import coil3.gif.AnimatedImageDecoder
 import coil3.request.crossfade
 import com.mephilia.gallery.data.AppSettings
@@ -25,5 +26,8 @@ class GalleryApp : Application(), SingletonImageLoader.Factory {
                 add(AnimatedImageDecoder.Factory())
             }
             .crossfade(150)
+            // After a fade, size the image like the new picture rather than the larger of old and new:
+            // otherwise a cropped (smaller) photo is drawn stretched until it's reopened
+            .preferEndFirstIntrinsicSize(true)
             .build()
 }

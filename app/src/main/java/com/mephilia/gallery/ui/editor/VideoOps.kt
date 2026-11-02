@@ -90,7 +90,7 @@ suspend fun exportVideo(
         if (turns != 0) add(ScaleAndRotateTransformation.Builder().setRotationDegrees(-90f * turns).build())
         if (flipH) add(ScaleAndRotateTransformation.Builder().setScale(-1f, 1f).build())
         // OpenGL normalized coordinates: x and y in [-1, 1], y pointing up
-        if (crop != FullCrop) add(Crop(2 * crop.left - 1, 2 * crop.right - 1, 1 - 2 * crop.bottom, 1 - 2 * crop.top))
+        if (crop != FullCrop) glCrop(crop).let { (l, r, b, t) -> add(Crop(l, r, b, t)) }
     }
     val effects = if (videoEffects.isEmpty()) Effects.EMPTY else Effects(emptyList(), videoEffects)
     val edited = EditedMediaItem.Builder(mediaItem).setEffects(effects).apply {
@@ -172,3 +172,10 @@ suspend fun saveVideoFrame(context: Context, item: com.mephilia.gallery.data.Med
         frame.recycle()
     }
 }
+
+/**
+ * Converts a normalized crop (0..1, y pointing down) to OpenGL coordinates as Media3's Crop expects them:
+ * left, right, bottom, top in [-1, 1] with y pointing up.
+ */
+internal fun glCrop(crop: Rect): List<Float> =
+    listOf(2 * crop.left - 1, 2 * crop.right - 1, 1 - 2 * crop.bottom, 1 - 2 * crop.top)

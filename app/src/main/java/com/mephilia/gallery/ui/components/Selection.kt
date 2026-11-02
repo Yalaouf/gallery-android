@@ -237,7 +237,17 @@ fun shareMedia(context: Context, items: List<MediaItem>) {
     if (AppSettings.current.stripLocationOnShare && items.any { !it.isVideo }) {
         shareScope.launch {
             val uris = ShareCopies.prepare(context.applicationContext, items)
-            startShare(context, items, uris)
+            // Photos that couldn't be cleaned are left out rather than shared with their location
+            val kept = items.indices.filter { uris[it] != null }
+            val skipped = items.size - kept.size
+            if (skipped > 0) {
+                Toast.makeText(
+                    context,
+                    context.resources.getQuantityString(R.plurals.share_location_failed, skipped, skipped),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+            if (kept.isNotEmpty()) startShare(context, kept.map { items[it] }, kept.map { uris[it]!! })
         }
     } else {
         startShare(context, items, items.map { it.uri })
@@ -269,7 +279,7 @@ private fun startShare(context: Context, items: List<MediaItem>, uris: List<Uri>
 internal fun normalizeForSearch(s: String): String =
     Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
 
-private fun isValidFolderName(name: String) =
+internal fun isValidFolderName(name: String) =
     name.isNotBlank() && name.none { it in "/\\:*?\"<>|" } && !name.startsWith(".")
 
 private val audioDirs = setOf("Music", "Podcasts", "Ringtones", "Alarms", "Notifications", "Audiobooks", "Recordings")
@@ -279,7 +289,7 @@ private val audioDirs = setOf("Music", "Podcasts", "Ringtones", "Alarms", "Notif
  * not in audio folders. Returns the reason a folder is refused, or null if it's allowed.
  */
 @StringRes
-private fun refusalReason(relativePath: String, items: List<MediaItem>): Int? {
+internal fun refusalReason(relativePath: String, items: List<MediaItem>): Int? {
     val top = relativePath.substringBefore('/')
     return when {
         top in audioDirs -> R.string.folder_audio_only

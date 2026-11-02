@@ -301,4 +301,8 @@
     <string name="icon_light">Light</string>
     <string name="icon_dark">Dark</string>
     <string name="app_icon_desc">Automatic follows the system theme, on launchers that support it. Changing the icon can take a few seconds, and some launchers remove the icon from the home screen: add it back from the app list.</string>
+    <plurals name="share_location_failed">
+        <item quantity="one">%1$d photo wasn\'t shared: its location couldn\'t be removed</item>
+        <item quantity="other">%1$d photos weren\'t shared: their location couldn\'t be removed</item>
+    </plurals>
 </resources>

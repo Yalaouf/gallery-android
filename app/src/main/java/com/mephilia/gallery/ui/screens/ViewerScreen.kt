@@ -1,5 +1,6 @@
 package com.mephilia.gallery.ui.screens
 
+import androidx.compose.runtime.rememberUpdatedState
 import com.mephilia.gallery.ui.components.toggleFavorite
 import com.mephilia.gallery.ui.components.deleteLocked
 import com.mephilia.gallery.ui.components.restoreFromLocked
@@ -167,14 +168,19 @@ fun ViewerScreen(
     }
 
     val pager = rememberPagerState(initialPage = list.indexOfFirst { it.id == startId }.coerceAtLeast(0)) { list.size }
+    // The item being shown, tracked by id: page numbers shift when items are added or removed elsewhere
+    // (e.g. a screenshot taken while viewing), and the shown item must not change because of that
     var currentId by remember { mutableStateOf(startId) }
-    LaunchedEffect(pager.settledPage, list) {
-        list.getOrNull(pager.settledPage)?.let { currentId = it.id }
+    val latestList by rememberUpdatedState(list)
+    // Only a swipe changes the current item, not a list update
+    LaunchedEffect(pager.settledPage) {
+        latestList.getOrNull(pager.settledPage)?.let { currentId = it.id }
     }
-    // When the list changes (edit, delete), stay on the same item if it still exists
+    // When the list changes, stay on the same item; if it's gone (deleted), take the one now in its place
     LaunchedEffect(list) {
         val idx = list.indexOfFirst { it.id == currentId }
-        if (idx >= 0 && idx != pager.currentPage) pager.scrollToPage(idx)
+        if (idx < 0) list.getOrNull(pager.currentPage.coerceIn(0, list.lastIndex))?.let { currentId = it.id }
+        else if (idx != pager.currentPage) pager.scrollToPage(idx)
     }
 
     var showBars by remember { mutableStateOf(true) }
@@ -283,7 +289,8 @@ fun ViewerScreen(
             if (item.isVideo) {
                 VideoPage(
                     item = item,
-                    active = pager.settledPage == page,
+                    // By id, so a list update shifting the page numbers doesn't stop and restart the video
+                    active = item.id == currentId,
                     muted = muted,
                     showControls = showBars,
                     controlsBottomPadding = bottomBarHeight,
@@ -558,6 +565,10 @@ private fun VideoPage(
     onTap: () -> Unit,
     onAutoHide: () -> Unit,
 ) {
+    // Where the video was and whether it was paused, so a new player (screen rotation, theme change…)
+    // picks up from there instead of restarting
+    var resumeAt by rememberSaveable(item.id, item.dateModified) { mutableLongStateOf(0L) }
+    var userPaused by rememberSaveable(item.id, item.dateModified) { mutableStateOf(false) }
     if (!active) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             AsyncImage(Thumb(item), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
@@ -572,7 +583,8 @@ private fun VideoPage(
     val player = remember(item.id, item.dateModified) {
         val settings = AppSettings.current
         createPlayer(context, item.uri, muted).apply {
-            playWhenReady = settings.autoplayVideos
+            if (resumeAt > 0) seekTo(resumeAt)
+            playWhenReady = settings.autoplayVideos && !userPaused
             repeatMode = if (settings.loopVideos) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
         }
     }
@@ -599,6 +611,7 @@ private fun VideoPage(
         while (true) {
             position = player.currentPosition
             duration = player.duration.coerceAtLeast(0L)
+            resumeAt = position
             delay(200)
         }
     }
@@ -636,7 +649,9 @@ private fun VideoPage(
                         interactions++
                         if (player.isPlaying) {
                             player.pause()
+                            userPaused = true
                         } else {
+                            userPaused = false
                             if (player.playbackState == Player.STATE_ENDED) player.seekTo(0)
                             player.play()
                         }

@@ -96,8 +96,12 @@ Requirements: JDK 17 or newer (the one bundled with Android Studio works) and th
 ```bash
 ./gradlew :app:assembleDebug     # debug APK
 ./gradlew :app:assembleRelease   # release APK, unsigned unless a release key is configured
-./gradlew :app:testDebugUnitTest # unit tests (GIF encoder and decoder)
+./gradlew :app:testDebugUnitTest # unit tests
 ```
+
+The unit tests run on the computer, Android code included, thanks to [Robolectric](https://robolectric.org): locked folder
+(including recovery and failed restores), photo edits checked pixel by pixel, location removal when sharing, sorting,
+albums, selection, settings, icon choice, and the GIF encoder and decoder.
 
 To install a release build directly on your phone, either configure a release key (below) or add
 `signReleaseWithDebugKey=true` to `local.properties`, then run `./gradlew :app:installRelease`.

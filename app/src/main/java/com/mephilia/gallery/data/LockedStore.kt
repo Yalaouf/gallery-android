@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import android.webkit.MimeTypeMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -137,7 +138,28 @@ class LockedStore(context: Context) {
         null
     }
 
+    /**
+     * The index, plus any locked file it doesn't mention (damaged or lost index): those are recovered with
+     * what the file itself tells (name, type, date), so a hidden photo can never become unreachable.
+     */
     private fun readIndex(): List<Entry> {
+        val indexed = parseIndex()
+        val known = indexed.mapTo(HashSet()) { it.file }
+        val orphans = dir.listFiles().orEmpty().filter {
+            it.isFile && it.name !in known && !it.name.startsWith("index.json")
+        }.mapNotNull { f ->
+            val id = f.name.substringBefore('.').toLongOrNull()?.let { -it } ?: return@mapNotNull null
+            val ext = f.name.substringAfterLast('.', "").lowercase()
+            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
+            Entry(
+                id, f.name, f.name, mime, mime.startsWith("video/"), f.lastModified(),
+                relativePath = "", width = 0, height = 0, durationMs = 0,
+            )
+        }
+        return indexed + orphans
+    }
+
+    private fun parseIndex(): List<Entry> {
         if (!indexFile.exists()) return emptyList()
         return runCatching {
             val arr = JSONArray(indexFile.readText())

@@ -31,8 +31,11 @@ object ShareCopies {
     )
     private val editable = setOf("image/jpeg", "image/jpg", "image/png", "image/webp")
 
-    /** Returns the URIs to share, in the same order as [items]. */
-    suspend fun prepare(context: Context, items: List<MediaItem>): List<Uri> = withContext(Dispatchers.IO) {
+    /**
+     * Returns the URIs to share, in the same order as [items]. A photo that couldn't be cleaned gives null:
+     * it must not be shared, since the original still has its location.
+     */
+    suspend fun prepare(context: Context, items: List<MediaItem>): List<Uri?> = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "shared").apply { mkdirs() }
         // Earlier copies may still be read by the app they were sent to: only remove old ones
         val old = System.currentTimeMillis() - 60 * 60 * 1000
@@ -40,11 +43,11 @@ object ShareCopies {
         val batch = File(dir, System.nanoTime().toString()).apply { mkdirs() }
         items.map { item ->
             if (item.isVideo) return@map item.uri
-            runCatching { stripped(context, item, batch) }.getOrNull() ?: item.uri
+            runCatching { stripped(context, item, batch) }.getOrNull()
         }
     }
 
-    private fun stripped(context: Context, item: MediaItem, dir: File): Uri {
+    internal fun stripped(context: Context, item: MediaItem, dir: File): Uri {
         val mime = item.mimeType.lowercase()
         val out: File
         if (mime in editable) {

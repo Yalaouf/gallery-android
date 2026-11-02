@@ -42,24 +42,18 @@ private fun photoDetails(context: Context, item: MediaItem): MediaDetails {
         else -> "$make $model"
     }.ifBlank { null }
 
-    val parts = buildList {
-        exif.getAttributeDouble(ExifInterface.TAG_F_NUMBER, 0.0).takeIf { it > 0 }?.let { add("f/" + trim(it)) }
-        exif.getAttributeDouble(ExifInterface.TAG_EXPOSURE_TIME, 0.0).takeIf { it > 0 }?.let {
-            add(if (it >= 1) "${trim(it)} s" else "1/${(1 / it).roundToInt()} s")
-        }
-        exif.getAttributeInt(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, 0).takeIf { it > 0 }?.let { add("ISO $it") }
-        val f35 = exif.getAttributeInt(ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM, 0)
-        val f = exif.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH, 0.0)
-        when {
-            f35 > 0 -> add("$f35 mm")
-            f > 0 -> add("${trim(f)} mm")
-        }
-    }
+    val exposure = formatExposure(
+        fNumber = exif.getAttributeDouble(ExifInterface.TAG_F_NUMBER, 0.0),
+        exposureTime = exif.getAttributeDouble(ExifInterface.TAG_EXPOSURE_TIME, 0.0),
+        iso = exif.getAttributeInt(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, 0),
+        focal35 = exif.getAttributeInt(ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM, 0),
+        focal = exif.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH, 0.0),
+    )
     val latLong = exif.latLong
     return MediaDetails(
         camera = camera,
         lens = exif.getAttribute(ExifInterface.TAG_LENS_MODEL)?.trim()?.ifBlank { null },
-        exposure = parts.joinToString(" · ").ifBlank { null },
+        exposure = exposure,
         latitude = latLong?.get(0)?.takeIf { latLong[0] != 0.0 || latLong[1] != 0.0 },
         longitude = latLong?.get(1)?.takeIf { latLong[0] != 0.0 || latLong[1] != 0.0 },
     )
@@ -70,11 +64,7 @@ private fun videoDetails(context: Context, item: MediaItem): MediaDetails {
     MediaMetadataRetriever().use { r ->
         runCatching { r.setDataSource(context, uri) }.onFailure { r.setDataSource(context, item.uri) }
         // ISO 6709, e.g. "+48.8577+002.2950/"
-        val location = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)?.let { s ->
-            Regex("([+-]\\d+(?:\\.\\d+)?)([+-]\\d+(?:\\.\\d+)?)").find(s)?.destructured?.let { (la, lo) ->
-                la.toDoubleOrNull() to lo.toDoubleOrNull()
-            }
-        }
+        val location = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)?.let(::parseIso6709)
         val fps = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)?.toFloatOrNull()
             ?: run {
                 val frames = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)?.toFloatOrNull()
@@ -90,6 +80,27 @@ private fun videoDetails(context: Context, item: MediaItem): MediaDetails {
         )
     }
 }
+
+/** "f/1.8 · 1/120 s · ISO 100 · 26 mm", skipping unknown (zero) values; null if nothing is known. */
+internal fun formatExposure(fNumber: Double, exposureTime: Double, iso: Int, focal35: Int, focal: Double): String? =
+    buildList {
+        if (fNumber > 0) add("f/" + trim(fNumber))
+        if (exposureTime > 0) add(if (exposureTime >= 1) "${trim(exposureTime)} s" else "1/${(1 / exposureTime).roundToInt()} s")
+        if (iso > 0) add("ISO $iso")
+        // The 35 mm equivalent is what people compare; the real focal length otherwise
+        when {
+            focal35 > 0 -> add("$focal35 mm")
+            focal > 0 -> add("${trim(focal)} mm")
+        }
+    }.joinToString(" · ").ifBlank { null }
+
+/** Latitude and longitude from an ISO 6709 string as stored in videos, e.g. "+48.8577+002.2950/". */
+internal fun parseIso6709(s: String): Pair<Double, Double>? =
+    Regex("([+-]\\d+(?:\\.\\d+)?)([+-]\\d+(?:\\.\\d+)?)").find(s)?.destructured?.let { (la, lo) ->
+        val lat = la.toDoubleOrNull() ?: return null
+        val lon = lo.toDoubleOrNull() ?: return null
+        lat to lon
+    }
 
 private fun trim(v: Double): String =
     if (v == v.toLong().toDouble()) v.toLong().toString() else String.format(Locale.ROOT, "%.1f", v)

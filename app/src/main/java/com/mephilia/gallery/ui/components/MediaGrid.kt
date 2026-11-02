@@ -73,7 +73,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.lazy.grid.LazyGridItemScope
 import androidx.compose.ui.unit.IntOffset
 
-private sealed interface GridEntry {
+internal sealed interface GridEntry {
     /** [ids]: the day's items, so the header can select them all. */
     class Header(val label: String, val key: String, val ids: List<Long>) : GridEntry
     data class Cell(val item: MediaItem) : GridEntry
@@ -368,7 +368,7 @@ private fun ThumbnailContent(item: MediaItem, badge: String?) {
     }
 }
 
-private fun buildEntries(
+internal fun buildEntries(
     items: List<MediaItem>,
     groupByDate: Boolean,
     todayLabel: String,

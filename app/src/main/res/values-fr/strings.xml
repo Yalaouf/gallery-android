@@ -317,4 +317,9 @@
     <string name="icon_light">Claire</string>
     <string name="icon_dark">Sombre</string>
     <string name="app_icon_desc">Automatique suit le thème du système, sur les lanceurs compatibles. Le changement peut prendre quelques secondes, et certains lanceurs retirent l\'icône de l\'écran d\'accueil : rajoutez-la depuis la liste des applications.</string>
+    <plurals name="share_location_failed">
+        <item quantity="one">%1$d photo non partagée : son lieu n\'a pas pu être retiré</item>
+        <item quantity="many">%1$d photos non partagées : leur lieu n\'a pas pu être retiré</item>
+        <item quantity="other">%1$d photos non partagées : leur lieu n\'a pas pu être retiré</item>
+    </plurals>
 </resources>

@@ -65,6 +65,18 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        // Robolectric tests use the app's resources and merged manifest (strings, FileProvider, launcher aliases)
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Robolectric reaches into JDK internals (file descriptors) that recent Java versions lock down
+            it.jvmArgs(
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--enable-native-access=ALL-UNNAMED",
+            )
+        }
+    }
     // Per-app language list (Android 13+)
     androidResources {
         generateLocaleConfig = true
@@ -96,6 +108,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     testImplementation(libs.junit)
+    // Runs Android code (bitmaps, files, preferences, package manager) on the computer
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 }

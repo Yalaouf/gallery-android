@@ -1,5 +1,6 @@
 package com.mephilia.gallery.ui
 
+import com.mephilia.gallery.data.MediaQueries
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -68,25 +69,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
 
     val albums: StateFlow<List<Album>> =
         combine(all, albumSort, albumSortDescending) { items, sort, desc ->
-            val albums = items.groupBy { it.bucketId }.map { (id, list) ->
-                val newest = list.maxBy { it.dateTaken }
-                Album(
-                    id = id,
-                    name = newest.bucketName,
-                    relativePath = newest.relativePath,
-                    cover = newest,
-                    count = list.size,
-                    lastModified = list.maxOf { it.dateModified },
-                    created = list.minOf { minOf(it.dateTaken, it.dateModified) },
-                )
-            }
-            val sorted = when (sort) {
-                AlbumSort.Modified -> albums.sortedBy { it.lastModified }
-                AlbumSort.Created -> albums.sortedBy { it.created }
-                AlbumSort.Name -> albums.sortedBy { it.name.lowercase() }
-            }
-            // For names, "descending" means A→Z, the more natural default
-            if (desc != (sort == AlbumSort.Name)) sorted.reversed() else sorted
+            MediaQueries.albums(items, sort, desc)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val favorites: StateFlow<List<MediaItem>> =
@@ -97,11 +80,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     val onThisDay: StateFlow<List<MediaItem>> =
         all.map { list ->
             val zone = ZoneId.systemDefault()
-            val today = LocalDate.now(zone)
-            list.filter {
-                val d = Instant.ofEpochMilli(it.dateTaken).atZone(zone).toLocalDate()
-                d.monthValue == today.monthValue && d.dayOfMonth == today.dayOfMonth && d.year < today.year
-            }.sortedByDescending { it.dateTaken }
+            MediaQueries.onThisDay(list, LocalDate.now(zone), zone)
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** A folder, or one of the pseudo albums (favorites, on this day, locked folder). */
@@ -229,17 +208,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         prefs.gridColumns = columns
     }
 
-    private fun filterMedia(items: List<MediaItem>, filter: MediaFilter) = when (filter) {
-        MediaFilter.All -> items
-        MediaFilter.Photos -> items.filter { !it.isVideo }
-        MediaFilter.Videos -> items.filter { it.isVideo }
-    }
+    private fun filterMedia(items: List<MediaItem>, filter: MediaFilter) = MediaQueries.filter(items, filter)
 
-    private fun sortMedia(items: List<MediaItem>, sort: MediaSort, seed: Long) = when (sort) {
-        MediaSort.DateDesc -> items.sortedByDescending { it.dateTaken }
-        MediaSort.DateAsc -> items.sortedBy { it.dateTaken }
-        MediaSort.Random -> items.sortedBy { it.id }.shuffled(Random(seed))
-        MediaSort.Name -> items.sortedBy { it.name.lowercase() }
-        MediaSort.Size -> items.sortedByDescending { it.size }
-    }
+    private fun sortMedia(items: List<MediaItem>, sort: MediaSort, seed: Long) = MediaQueries.sort(items, sort, seed)
 }

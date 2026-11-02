@@ -23,10 +23,10 @@ No ads, no trackers, no internet access.
 ## Download
 
 Get the latest APK from the [**Releases page**](https://github.com/Yalaouf/gallery-android/releases/latest)
-(`gallery-vX.Y.apk`). Android 11 or newer is required.
+(`gallery-vX.Y.Z.apk`). Android 11 or newer is required.
 
 The APK is signed with this certificate (SHA-256), which you can check with
-`apksigner verify --print-certs gallery-vX.Y.apk`:
+`apksigner verify --print-certs gallery-vX.Y.Z.apk`:
 
 ```
 E8:BB:B4:0D:FF:52:90:91:5A:14:38:5E:68:03:AF:41:84:B4:5D:F5:D9:33:1D:77:2C:E6:66:73:65:84:39:90
@@ -110,7 +110,7 @@ To install a release build directly on your phone, either configure a release ke
 
 ## Releasing
 
-Pushing a `v*` tag (e.g. `v1.4`) runs the [release workflow](.github/workflows/release.yml): it builds and tests the
+Pushing a `v*` tag (e.g. `v1.1.5`) runs the [release workflow](.github/workflows/release.yml): it builds and tests the
 app, signs the APK and publishes a GitHub release with that version's notes from `CHANGELOG.md`.
 To publish an existing tag (e.g. an older version), run the workflow manually from the Actions tab and enter the tag;
 such releases are not marked as "Latest".

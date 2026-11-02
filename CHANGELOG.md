@@ -3,7 +3,11 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
-## [2.1.3] — 2026-11-02
+Versions were renumbered on 2026-11-02 to grow more slowly: 1.0 to 1.5 became 1.0.0 to 1.0.5, and 2.0 to 2.1.3 became
+1.1.0 to 1.1.4. The APKs of those versions still show their old number in Settings; from 1.1.5 on, the number shown
+matches.
+
+## [1.1.4] — 2026-11-02
 
 ### Added
 - **Back to the top**: tapping Photos or Albums in the navigation bar while already on that tab scrolls back to the
@@ -20,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   No change in how the app works, apart from small visual details: the photo editor's mirror button is highlighted
   while mirrored, empty screens center their text, and the selection bar spaces its buttons evenly.
 
-## [2.1.2] — 2026-11-02
+## [1.1.3] — 2026-11-02
 
 ### Fixed
 - **Smoother with large libraries**: sorting, filtering and grouping into albums now run in the background instead
@@ -37,10 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 - The locked folder's explanations (in the app and the README) now say that files are hidden, not encrypted.
 
-## [2.1.1] — 2026-11-02
+## [1.1.2] — 2026-11-02
 
-The 2.1 release was published with the version number of 2.0 (it showed "2.0" in Settings and wasn't seen as an
-update). 2.1.1 contains the same changes with the right version number.
+The 1.1.1 release was published with the version number of 1.1.0 inside the app, so it wasn't seen as an update.
+1.1.2 contains the same changes with the right version number.
 
 ### Fixed
 - **Video restarting after a screenshot**: taking a screenshot (or any new photo arriving) while watching a video
@@ -54,7 +58,7 @@ update). 2.1.1 contains the same changes with the right version number.
 ### Added
 - Unit tests for the main features (80 tests), run on the computer with Robolectric, on every push.
 
-## [2.0] — 2026-11-02
+## [1.1.0] — 2026-11-02
 
 ### Added
 - **Collections tab**, next to Photos and Albums: On this day, Favorites, all Photos, all Videos, Trash and the Locked folder, so Albums
@@ -90,7 +94,7 @@ update). 2.1.1 contains the same changes with the right version number.
 ### Fixed
 - "Edit with Gallery" from the share menu crashed on Android 11 and 12.
 
-## [1.5] — 2026-11-02
+## [1.0.5] — 2026-11-02
 
 ### Added
 - **Swipe to close**: in the viewer, swipe a photo or video up or down to go back. It follows the finger, shrinks
@@ -103,7 +107,7 @@ update). 2.1.1 contains the same changes with the right version number.
   empty squares until the app was restarted, because Android drops change notifications while the app is in the
   background. The gallery now refreshes whenever it comes back to the foreground.
 
-## [1.4] — 2026-11-01
+## [1.0.4] — 2026-11-01
 
 ### Fixed
 - **Stretched photo after cropping**: right after replacing a photo with a smaller (cropped) version, the viewer drew it
@@ -120,7 +124,7 @@ update). 2.1.1 contains the same changes with the right version number.
 - **Video to GIF**: frames are reduced in sharp halving steps instead of a single bilinear resize, and the sizes are
   now 320, 480, 720 and 1080 px (was up to 640). A note warns that large GIFs are heavy.
 
-## [1.3] — 2026-10-30
+## [1.0.3] — 2026-10-30
 
 ### Added
 - **Trash**: a Trash folder at the end of the Albums tab lists deleted items with the days left before Android
@@ -149,7 +153,7 @@ update). 2.1.1 contains the same changes with the right version number.
 - Release workflow: third-party actions pinned to exact commits, the GitHub token no longer kept on disk during
   the build, and the decoded signing key deleted at the end of every run.
 
-## [1.2] — 2026-10-30
+## [1.0.2] — 2026-10-30
 
 ### Added
 - **Export videos as animated GIFs** (up to 15 seconds), using the current trim, crop, rotation and mirror.
@@ -167,7 +171,7 @@ update). 2.1.1 contains the same changes with the right version number.
   when the other app (e.g. the screenshot tool) already allowed it.
 - Files are flushed to storage when saved, so a save can't leave an empty file if the phone shuts down right after.
 
-## [1.1] — 2026-10-29
+## [1.0.1] — 2026-10-29
 
 ### Changed
 - Trim, crop and rotate can be combined in one editing session:
@@ -175,7 +179,7 @@ update). 2.1.1 contains the same changes with the right version number.
 - The video preview shows the cropped result while trimming or rotating.
 - A dot on the video tools shows which edits are active.
 
-## [1.0] — 2026-10-29
+## [1.0.0] — 2026-10-29
 
 ### Added
 - Photos view grouped by day, with sorting (date, name, size, random), filtering (photos/videos) and 2–6 columns.
@@ -191,14 +195,13 @@ update). 2.1.1 contains the same changes with the right version number.
 - English and French, following the system language.
 - No internet permission, no trackers.
 
-[2.1.2]: https://github.com/Yalaouf/gallery-android/compare/v2.1.1...v2.1.2
-[2.1.3]: https://github.com/Yalaouf/gallery-android/compare/v2.1.2...v2.1.3
-[2.1.2]: https://github.com/Yalaouf/gallery-android/compare/v2.1.1...v2.1.2
-[2.1.1]: https://github.com/Yalaouf/gallery-android/compare/v2.0...v2.1.1
-[2.0]: https://github.com/Yalaouf/gallery-android/compare/v1.5...v2.0
-[1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.4...v1.5
-[1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.3...v1.4
-[1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.2...v1.3
-[1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1...v1.2
-[1.1]: https://github.com/Yalaouf/gallery-android/compare/v1.0...v1.1
-[1.0]: https://github.com/Yalaouf/gallery-android/releases/tag/v1.0
+[1.1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.1.3...v1.1.4
+[1.1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1.0...v1.1.2
+[1.1.0]: https://github.com/Yalaouf/gallery-android/compare/v1.0.5...v1.1.0
+[1.0.5]: https://github.com/Yalaouf/gallery-android/compare/v1.0.4...v1.0.5
+[1.0.4]: https://github.com/Yalaouf/gallery-android/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/Yalaouf/gallery-android/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/Yalaouf/gallery-android/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/Yalaouf/gallery-android/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/Yalaouf/gallery-android/releases/tag/v1.0.0

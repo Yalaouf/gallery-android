@@ -41,7 +41,7 @@
 
         <!--
             Launcher entries, one per icon choice (Settings → App icon); only one is enabled at a time.
-            ".MainActivity" keeps its name from before 2.0 so existing home screen icons keep working.
+            ".MainActivity" keeps its name from before 1.1.0 so existing home screen icons keep working.
         -->
         <activity-alias
             android:name=".MainActivity"

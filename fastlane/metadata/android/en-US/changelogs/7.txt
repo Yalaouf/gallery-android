@@ -1,4 +1,4 @@
-New in 2.0:
+New in 1.1.0:
 • New Collections tab: favorites, on this day, trash, and a locked folder behind your fingerprint
 • Slideshow, fast date scroller
 • Copy, rename, create albums, set as wallpaper

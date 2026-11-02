@@ -1,4 +1,4 @@
-Nouveautés de la 2.1.3 :
+Nouveautés de la 1.1.4 :
 • Touchez à nouveau Photos ou Albums pour revenir en haut
 • Dossier verrouillé : un masquage raté ne laisse plus la photo aux deux endroits
 • Éditeur de GIF : appliquer deux fois le miroir ne compte plus comme une modification

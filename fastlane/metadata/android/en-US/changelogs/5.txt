@@ -1,4 +1,4 @@
-New in 1.4:
+New in 1.0.4:
 • Fixed a stretched photo right after cropping
 • Video player: new controls that are never covered by the action bar
 • Sharper GIFs: cleaner details and text, sizes up to 1080 px

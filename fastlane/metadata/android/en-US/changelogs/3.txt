@@ -1,4 +1,4 @@
-New in 1.2:
+New in 1.0.2:
 • Export videos as animated GIFs (up to 15 s), at the same speed as the video
 • Edit GIFs: crop, rotate, mirror, speed and loop
 • Animated GIFs play in the viewer

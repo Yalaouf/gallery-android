@@ -1,4 +1,4 @@
-Nouveautés de la 1.2 :
+Nouveautés de la 1.0.2 :
 • Export des vidéos en GIF animé (jusqu'à 15 s), à la même vitesse que la vidéo
 • Retouche des GIF : recadrage, rotation, miroir, vitesse et boucle
 • Les GIF animés sont lus dans la visionneuse

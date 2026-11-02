@@ -1,5 +1,5 @@
-Nouveautés de la 2.1.1 :
+Nouveautés de la 1.1.2 :
 • Une vidéo ne redémarre plus quand vous faites une capture d'écran ; une vidéo en pause reste en pause
 • Retrait du lieu au partage : une photo dont le lieu ne peut pas être retiré n'est plus partagée
 • Dossier verrouillé : les fichiers masqués restent visibles même si son index est abîmé
-• Affiche le bon numéro de version (la 2.1 affichait 2.0)
+• Affiche le bon numéro de version dans les Paramètres

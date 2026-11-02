@@ -1,4 +1,4 @@
-New in 1.5:
+New in 1.0.5:
 • Swipe a photo or video up or down to close it
 • Animated back gesture
 • Fixed empty squares after deleting pictures from another app

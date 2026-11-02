@@ -1,5 +1,14 @@
 package com.mephilia.gallery.ui.components
 
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.FileCopy
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Favorite
+import kotlinx.coroutines.MainScope
+import com.mephilia.gallery.data.ShareCopies
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -105,9 +114,13 @@ fun SelectionActionsBar(
 ) {
     val context = LocalContext.current
     var moving by remember { mutableStateOf(false) }
+    var copying by remember { mutableStateOf(false) }
     var confirmTrash by remember { mutableStateOf(false) }
+    var confirmLock by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
     val access = rememberMediaAccess()
     val scope = rememberCoroutineScope()
+    val allFavorite = items.isNotEmpty() && items.all { it.favorite }
 
     Surface(
         modifier = modifier.shadow(16.dp, CircleShape),
@@ -115,14 +128,48 @@ fun SelectionActionsBar(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 6.dp,
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            BarAction(Icons.Rounded.SelectAll, stringResource(R.string.action_all)) { onSelectAll() }
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+            BarAction(
+                if (allFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                stringResource(R.string.action_favorite),
+            ) { scope.launch { toggleFavorite(access, items) } }
             BarAction(Icons.AutoMirrored.Rounded.DriveFileMove, stringResource(R.string.action_move)) { moving = true }
             BarAction(Icons.Rounded.Share, stringResource(R.string.action_share)) { shareMedia(context, items) }
             BarAction(Icons.Rounded.Delete, stringResource(R.string.action_delete)) {
                 if (AppSettings.current.confirmDelete) confirmTrash = true
                 else scope.launch { trash(access, items, onDone) }
             }
+            Box {
+                BarAction(Icons.Rounded.MoreVert, stringResource(R.string.action_more)) { menu = true }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_select_all)) },
+                        leadingIcon = { Icon(Icons.Rounded.SelectAll, null) },
+                        onClick = { menu = false; onSelectAll() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_copy_to)) },
+                        leadingIcon = { Icon(Icons.Rounded.FileCopy, null) },
+                        onClick = { menu = false; copying = true },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_move_to_locked)) },
+                        leadingIcon = { Icon(Icons.Rounded.Lock, null) },
+                        onClick = { menu = false; confirmLock = true },
+                    )
+                }
+            }
+        }
+    }
+
+    if (copying) {
+        MoveFlow(items, albums, onDismiss = { copying = false }, onMoved = { copying = false; onDone() }, copy = true)
+    }
+
+    if (confirmLock) {
+        ConfirmLockDialog(items.size, onDismiss = { confirmLock = false }) {
+            confirmLock = false
+            scope.launch { if (moveToLocked(context, access, items)) onDone() }
         }
     }
 
@@ -146,6 +193,18 @@ private suspend fun trash(access: MediaAccess, items: List<MediaItem>, onDone: (
 }
 
 @Composable
+fun ConfirmLockDialog(count: Int, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Lock, null) },
+        title = { Text(pluralStringResource(R.plurals.lock_title, count, count)) },
+        text = { Text(stringResource(R.string.lock_text)) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_move)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+@Composable
 fun ConfirmTrashDialog(count: Int, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -163,7 +222,7 @@ private fun BarAction(icon: ImageVector, label: String, onClick: () -> Unit) {
         Modifier
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, label)
@@ -171,12 +230,26 @@ private fun BarAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     }
 }
 
+private val shareScope = MainScope()
+
 fun shareMedia(context: Context, items: List<MediaItem>) {
     if (items.isEmpty()) return
+    if (AppSettings.current.stripLocationOnShare && items.any { !it.isVideo }) {
+        shareScope.launch {
+            val uris = ShareCopies.prepare(context.applicationContext, items)
+            startShare(context, items, uris)
+        }
+    } else {
+        startShare(context, items, items.map { it.uri })
+    }
+}
+
+private fun startShare(context: Context, items: List<MediaItem>, uris: List<Uri>) {
     val intent = if (items.size == 1) {
         Intent(Intent.ACTION_SEND).apply {
-            type = items[0].mimeType
-            putExtra(Intent.EXTRA_STREAM, items[0].uri)
+            // Converted copies are JPEG
+            type = if (uris[0] != items[0].uri && !items[0].isVideo) "image/*" else items[0].mimeType
+            putExtra(Intent.EXTRA_STREAM, uris[0])
         }
     } else {
         Intent(Intent.ACTION_SEND_MULTIPLE).apply {
@@ -185,7 +258,7 @@ fun shareMedia(context: Context, items: List<MediaItem>) {
                 items.all { it.isVideo } -> "video/*"
                 else -> "*/*"
             }
-            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList<Uri>(items.map { it.uri }))
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
         }
     }
     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -222,6 +295,8 @@ fun MoveFlow(
     albums: List<Album>,
     onDismiss: () -> Unit,
     onMoved: () -> Unit,
+    /** Copies instead of moving: the originals stay where they are. */
+    copy: Boolean = false,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -235,7 +310,7 @@ fun MoveFlow(
     val targets = remember(albums, sourcePaths, query, sortRecent) {
         val q = normalizeForSearch(query.trim())
         albums
-            .filter { !(sourcePaths.size == 1 && it.relativePath in sourcePaths) }
+            .filter { copy || !(sourcePaths.size == 1 && it.relativePath in sourcePaths) }
             .filter { q.isEmpty() || normalizeForSearch(it.name).contains(q) || normalizeForSearch(it.relativePath).contains(q) }
             .let { list ->
                 if (sortRecent) list.sortedByDescending { it.lastModified } else list.sortedBy { normalizeForSearch(it.name) }
@@ -245,7 +320,19 @@ fun MoveFlow(
     val access = rememberMediaAccess()
 
     fun moveTo(path: String) {
-        scope.launch {
+        if (copy) scope.launch {
+            val failed = writer.copy(items, path)
+            val copied = items.size - failed
+            val folder = path.trimEnd('/').substringAfterLast('/')
+            val res = context.resources
+            val message = buildString {
+                append(res.getQuantityString(R.plurals.copied_to, copied, copied, folder))
+                if (failed > 0) append(" (").append(res.getQuantityString(R.plurals.copy_failed, failed, failed)).append(")")
+            }
+            MediaEvents.changed()
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            onMoved()
+        } else scope.launch {
             val toMove = items.filter { it.relativePath != path }
             val failed = try {
                 access.write(toMove.map { it.uri }) { writer.move(toMove, path) }
@@ -273,7 +360,7 @@ fun MoveFlow(
     ) {
         Column(Modifier.navigationBarsPadding().imePadding()) {
             Text(
-                pluralStringResource(R.plurals.move_title, items.size, items.size),
+                pluralStringResource(if (copy) R.plurals.copy_title else R.plurals.move_title, items.size, items.size),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
@@ -382,7 +469,7 @@ fun MoveFlow(
                     newFolder = false
                     // Pictures/ accepts both images and videos
                     moveTo("Pictures/${name.trim()}/")
-                }) { Text(stringResource(R.string.move_here)) }
+                }) { Text(stringResource(if (copy) R.string.copy_here else R.string.move_here)) }
             },
             dismissButton = { TextButton(onClick = { newFolder = false }) { Text(stringResource(R.string.action_cancel)) } },
         )

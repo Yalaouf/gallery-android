@@ -39,19 +39,27 @@ An F-Droid release is planned.
 **Browse**
 - **Photos**: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns
 - **Albums**: your folders, sorted by date modified, date created or name, with a search bar
+- **Collections**: **On this day** (photos taken on today's date in previous years, also shown at the top of Photos),
+  **Favorites**, all **Photos**, all **Videos**, the **trash** and the **locked folder**
+- **Fast scroller**: drag the scrollbar to jump to any month
 - Full-screen viewer with pinch and double-tap zoom, animated GIFs, a video player with its own controls, and swipe up or down to close
+- **Slideshow**, and detailed info: camera, lens, exposure, frame rate, location (with "Open in Maps")
 - Videos start muted in split screen, so the other app (e.g. YouTube) keeps playing
 
 **Organize**
 - Long-press and drag to select many items; the grid scrolls by itself at the edges. Select a whole day or everything
-- **Move** items to another folder or a new one, with folder search and an A → Z / recent sort
+- **Favorite**, **move** or **copy** items to another folder or a new one, with folder search and an A → Z / recent sort
+- **Create albums** (pick the photos to move or copy into them) and **rename** files
+- **Locked folder**: hide photos and videos from the gallery and from other apps, behind your fingerprint or screen lock
+- **Set as** wallpaper or contact picture
 - **Share** and **delete**; deleted items go to the **trash**, where they can be restored for 30 days or deleted for good
 - Instant refresh after deleting, replacing or moving
 
 **Edit**
-- **Photos**: crop (free or fixed ratios), rotate, **straighten by any angle** (with automatic zoom so no empty corners show), mirror
+- **Photos**: crop (free or fixed ratios), rotate, **straighten by any angle** (with automatic zoom so no empty corners show), mirror,
+  adjust light, contrast, color and warmth, **draw**, and **pixelate** faces, plates or text to hide them
 - **GIFs**: the same tools, plus speed (0.25× to 4×) and looping
-- **Videos**: trim with a live preview, crop, rotate, mirror
+- **Videos**: trim with a live preview, crop, rotate, mirror, change speed (0.25× to 4×), remove the sound, save a frame as a photo
 - **Video to GIF**: export up to 15 seconds as an animated GIF, at the video's speed, 10 to 50 fps, up to 1080 px
 - Save as a copy or replace the original: ask each time or set a default, separately for photos and videos
 - Keeps photo EXIF data (date, camera, and optionally the GPS location)
@@ -60,6 +68,7 @@ An F-Droid release is planned.
 
 **Look**
 - Material You design, light / dark / pure-black themes, wallpaper colors
+- Light or dark app icon, or automatic (follows the system theme on launchers that support it)
 - English and French, following the system language (or the per-app language on Android 13+)
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
@@ -69,9 +78,16 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
 The app has **no internet permission**: nothing ever leaves your phone. There are no ads, trackers or analytics,
 and the only libraries are AndroidX, Media3 and Coil.
 
+- **Remove location when sharing** (optional, in Settings): shared photos are sent as copies without their GPS data.
+- **Locked folder**: hidden items are moved to the app's private storage, where other apps can't see them.
+  They are excluded from cloud backups (a direct transfer to a new phone keeps them), and they are
+  **deleted if you uninstall the app**: unhide them first.
+- "Open in Maps" hands the coordinates to your maps app; Gallery itself never goes online.
+
 It needs access to your photos and videos. Optional permissions:
 - **Media management** (Android 12+): edit, move and delete without Android asking for confirmation every time.
 - **Photo location**: lets Android hand the GPS location to the app, so it's kept in edited photos.
+- **Fingerprint / face** (granted automatically): unlocks the locked folder.
 
 ## Building
 

@@ -1,5 +1,6 @@
 package com.mephilia.gallery
 
+import androidx.core.content.IntentCompat
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -43,7 +44,7 @@ class ExternalActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         requestHighestRefreshRate()
         val shared = intent.action == Intent.ACTION_SEND
-        val uri = if (shared) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else intent.data
+        val uri = if (shared) IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java) else intent.data
         // Only content:// URIs, which is what apps share. A file:// URI could point into this app's
         // private storage, and saving or sharing it would leak those files.
         if (uri == null || uri.scheme != ContentResolver.SCHEME_CONTENT) {

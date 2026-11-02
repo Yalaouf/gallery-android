@@ -1,5 +1,9 @@
 package com.mephilia.gallery.ui
 
+import com.mephilia.gallery.ui.screens.NewAlbumScreen
+import com.mephilia.gallery.ui.screens.SecureWindow
+import com.mephilia.gallery.ui.screens.LockedScreen
+import com.mephilia.gallery.data.LOCKED_ID
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -103,6 +107,15 @@ sealed interface Route {
     data class EditGif(val item: MediaItem) : Route {
         override val key = "edit-gif/${item.id}"
     }
+
+    data object Locked : Route {
+        override val key = "locked"
+    }
+
+    /** Picks the items to put in a new album named [name]. */
+    data class NewAlbum(val name: String) : Route {
+        override val key = "new-album/$name"
+    }
 }
 
 class Navigator {
@@ -169,6 +182,15 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
     val nav = remember { Navigator() }
     var homeTab by rememberSaveable { mutableIntStateOf(AppSettings.current.startTab) }
     val holder = rememberSaveableStateHolder()
+    // Leaving the app locks the locked folder again, and closes the screens showing it
+    val inLocked = Route.Locked in nav.stack
+    LaunchedEffect(inLocked) { if (!inLocked) vm.relock() }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (vm.authenticating) return@LifecycleEventEffect
+        vm.relock()
+        val first = nav.stack.indexOfFirst { it == Route.Locked }
+        if (first > 0) while (nav.stack.size > first) nav.stack.removeAt(nav.stack.lastIndex).let { holder.removeState(it.key) }
+    }
 
     // Predictive back: during the system back swipe the current screen shrinks and follows the finger,
     // then closes when the swipe is released (or springs back if it's cancelled)
@@ -237,6 +259,11 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                     onOpenMedia = { nav.push(Route.Viewer(null, it.id)) },
                     onOpenAlbum = { nav.push(Route.Album(it.id, it.name)) },
                     onOpenTrash = { nav.push(Route.Trash) },
+                    onOpenLocked = { nav.push(Route.Locked) },
+                    onNewAlbum = { nav.push(Route.NewAlbum(it)) },
+                    onOpenInCollection = { id, name, item ->
+                        if (item != null) nav.push(Route.Viewer(id, item.id)) else nav.push(Route.Album(id, name))
+                    },
                 )
                 is Route.Album -> AlbumScreen(
                     vm = vm,
@@ -245,7 +272,9 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                     onBack = back,
                     onOpenMedia = { nav.push(Route.Viewer(route.id, it.id)) },
                 )
-                is Route.Viewer -> ViewerScreen(
+                is Route.Viewer -> {
+                    if (route.bucketId == LOCKED_ID) SecureWindow()
+                    ViewerScreen(
                     vm = vm,
                     bucketId = route.bucketId,
                     startId = route.startId,
@@ -254,6 +283,7 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                         nav.push(editRouteFor(item))
                     },
                 )
+                }
                 Route.Trash -> TrashScreen(vm = vm, onBack = back, onOpen = { nav.push(Route.TrashViewer(it.id)) })
                 is Route.TrashViewer -> {
                     val trash by vm.trash.collectAsStateWithLifecycle()
@@ -270,6 +300,8 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                 is Route.EditPhoto -> PhotoEditorScreen(item = route.item, onClose = back)
                 is Route.EditVideo -> VideoEditorScreen(item = route.item, onClose = back)
                 is Route.EditGif -> GifEditorScreen(item = route.item, onClose = back)
+                Route.Locked -> LockedScreen(vm = vm, onBack = back, onOpen = { nav.push(Route.Viewer(LOCKED_ID, it.id)) })
+                is Route.NewAlbum -> NewAlbumScreen(vm = vm, name = route.name, onClose = back)
             }
         }
         }

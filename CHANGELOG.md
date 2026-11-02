@@ -3,6 +3,42 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
+## [2.0] — 2026-11-02
+
+### Added
+- **Collections tab**, next to Photos and Albums: On this day, Favorites, all Photos, all Videos, Trash and the Locked folder, so Albums
+  only lists your folders. It can also be the tab the app opens on.
+- **Favorites**: a heart in the viewer and in the selection bar, a heart on favorite thumbnails, and a Favorites
+  collection. It uses Android's own favorite flag, so other gallery apps see the same favorites.
+- **Locked folder**: hide photos and videos from the gallery and from every other app. It opens with your
+  fingerprint, face or screen lock, locks again as soon as you leave the app, and its screens can't be captured
+  (screenshots, recent apps). Items are moved to the app's private storage, excluded from cloud backups, and can be
+  put back in their original folder. They are deleted if the app is uninstalled, which the app explains up front.
+- **On this day**: photos taken on today's date in previous years, in Collections and as one card per year at the
+  top of Photos (that row can be turned off in Settings).
+- **Fast scroller**: while scrolling, a handle appears on the right; drag it to jump through the grid, with a
+  month and year bubble.
+- **Slideshow** from the viewer's ⋮ menu, with an adjustable time per photo (2 to 10 s). A tap stops it.
+- **Copy** to another folder, **rename**, and **create an album** (name it, then pick the photos to move or copy).
+- **Set as** wallpaper, contact picture… through the apps that support it.
+- **More details in Info**: camera, lens, aperture, shutter speed, ISO, focal length, frame rate and bitrate for
+  videos, and the location with an "Open in Maps" button (handled by your maps app; Gallery stays offline).
+- **Remove location when sharing** (Settings → Privacy, off by default): shared photos are sent as copies without
+  GPS data. Formats that can't be edited in place (HEIC…) are sent as JPEG. Videos are shared as they are.
+- **Photo editor**: new Adjust (light, contrast, color, warmth), Draw (6 colors, adjustable size, undo) and
+  Hide tabs. Hide pixelates what you paint over, in blocks too coarse to recover faces, plates or text.
+- **Video editor**: speed (0.25× to 4×, keeping the pitch of the sound), remove the sound, and save the current
+  frame as a photo (with the same rotation and crop).
+- The app version is shown at the bottom of Settings.
+
+### Changed
+- **New icon**: two mountains and an orange sun, in a minimalist line style, with a dark version.
+  Settings → App icon: Automatic (follows the system theme, on launchers that support it), Light or Dark.
+- The selection bar now has Favorite, Move, Share, Delete and a ⋮ menu (Select all, Copy to, Locked folder).
+
+### Fixed
+- "Edit with Gallery" from the share menu crashed on Android 11 and 12.
+
 ## [1.5] — 2026-11-02
 
 ### Added
@@ -104,6 +140,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[2.0]: https://github.com/Yalaouf/gallery-android/compare/v1.5...v2.0
 [1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.4...v1.5
 [1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.3...v1.4
 [1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.2...v1.3

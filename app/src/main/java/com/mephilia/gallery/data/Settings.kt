@@ -30,6 +30,10 @@ data class Settings(
     val keepLocation: Boolean = true,
     val confirmDelete: Boolean = true,
     val showTrash: Boolean = true,
+    /** Shared photos are sent as copies without GPS data. */
+    val stripLocationOnShare: Boolean = false,
+    val slideshowSeconds: Int = 4,
+    val showOnThisDay: Boolean = true,
 )
 
 /** App settings shared by all screens, persisted on every change. */
@@ -57,6 +61,9 @@ object AppSettings {
             keepLocation = sp.getBoolean("keep_location", d.keepLocation),
             confirmDelete = sp.getBoolean("confirm_delete", d.confirmDelete),
             showTrash = sp.getBoolean("show_trash", d.showTrash),
+            stripLocationOnShare = sp.getBoolean("strip_location_share", d.stripLocationOnShare),
+            slideshowSeconds = sp.getInt("slideshow_seconds", d.slideshowSeconds),
+            showOnThisDay = sp.getBoolean("on_this_day", d.showOnThisDay),
         )
     }
 
@@ -88,6 +95,9 @@ object AppSettings {
             .putBoolean("keep_location", s.keepLocation)
             .putBoolean("confirm_delete", s.confirmDelete)
             .putBoolean("show_trash", s.showTrash)
+            .putBoolean("strip_location_share", s.stripLocationOnShare)
+            .putInt("slideshow_seconds", s.slideshowSeconds)
+            .putBoolean("on_this_day", s.showOnThisDay)
             .apply()
     }
 }

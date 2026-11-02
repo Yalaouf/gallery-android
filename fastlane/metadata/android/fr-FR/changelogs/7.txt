@@ -1,0 +1,8 @@
+Nouveautés de la 2.0 :
+• Nouvel onglet Collections : favoris, ce jour-là, corbeille, et un dossier verrouillé par empreinte
+• Diaporama, défilement rapide par date
+• Copier, renommer, créer des albums, définir comme fond d'écran
+• Retouche photo : lumière et couleurs, dessin, pixelisation
+• Retouche vidéo : vitesse, suppression du son, image en photo
+• Plus d'infos sur les photos, et option pour retirer le lieu au partage
+• Nouvelle icône, avec une version sombre

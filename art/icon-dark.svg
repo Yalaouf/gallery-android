@@ -1,0 +1,13 @@
+<!--
+  Dark version of icon.svg (same drawing, same rules), used when the phone is in dark mode or chosen in Settings.
+  Dark palette for the family: background #1C1B1A, lines #F3EFE8, accent a little brighter
+  (gallery #EA6B49) so it keeps its contrast on the dark background.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <rect width="108" height="108" fill="#1C1B1A"/>
+  <circle cx="65" cy="42" r="7.5" fill="#EA6B49"/>
+  <g fill="none" stroke="#F3EFE8" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 73 L46 54 L60 73 Z"/>
+    <path d="M56 67.6 L65 58 L76 73"/>
+  </g>
+</svg>

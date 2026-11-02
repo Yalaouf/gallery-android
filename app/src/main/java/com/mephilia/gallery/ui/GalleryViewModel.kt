@@ -26,12 +26,29 @@ import com.mephilia.gallery.data.AppSettings
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import com.mephilia.gallery.data.FAVORITES_ID
+import com.mephilia.gallery.data.LOCKED_ID
+import com.mephilia.gallery.data.LockedStore
+import com.mephilia.gallery.data.ON_THIS_DAY_ID
+import com.mephilia.gallery.data.PHOTOS_ID
+import com.mephilia.gallery.data.VIDEOS_ID
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = MediaRepository(app)
+    val lockedStore = LockedStore(app)
+    /** Locked folder content, only loaded while it's unlocked. */
+    val locked = MutableStateFlow<List<MediaItem>>(emptyList())
+    val lockedUnlocked = MutableStateFlow(false)
+    /** While the unlock prompt is shown (the PIN screen hides the app, which must not relock it). */
+    @Volatile var authenticating = false
     private val prefs = Prefs(app)
 
     private val all = MutableStateFlow<List<MediaItem>>(emptyList())
+    /** Everything, unsorted and unfiltered. */
+    val allItems: StateFlow<List<MediaItem>> = all
     val trash = MutableStateFlow<List<MediaItem>>(emptyList())
     /** When the app last replaced each file, by id. */
     private val replacedAt = HashMap<Long, Long>()
@@ -72,10 +89,49 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
             if (desc != (sort == AlbumSort.Name)) sorted.reversed() else sorted
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun albumMedia(bucketId: Long): Flow<List<MediaItem>> =
-        combine(all, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
+    val favorites: StateFlow<List<MediaItem>> =
+        all.map { list -> list.filter { it.favorite }.sortedByDescending { it.dateTaken } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Photos and videos taken on today's date in previous years, newest year first. */
+    val onThisDay: StateFlow<List<MediaItem>> =
+        all.map { list ->
+            val zone = ZoneId.systemDefault()
+            val today = LocalDate.now(zone)
+            list.filter {
+                val d = Instant.ofEpochMilli(it.dateTaken).atZone(zone).toLocalDate()
+                d.monthValue == today.monthValue && d.dayOfMonth == today.dayOfMonth && d.year < today.year
+            }.sortedByDescending { it.dateTaken }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** A folder, or one of the pseudo albums (favorites, on this day, locked folder). */
+    fun albumMedia(bucketId: Long): Flow<List<MediaItem>> = when (bucketId) {
+        FAVORITES_ID -> favorites
+        ON_THIS_DAY_ID -> onThisDay
+        LOCKED_ID -> locked
+        // All photos or all videos, in the chosen sort (the photos/videos filter doesn't apply here)
+        PHOTOS_ID, VIDEOS_ID -> combine(all, mediaSort, shuffleSeed) { items, sort, seed ->
+            sortMedia(items.filter { it.isVideo == (bucketId == VIDEOS_ID) }, sort, seed)
+        }
+        else -> combine(all, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
             sortMedia(filterMedia(items.filter { it.bucketId == bucketId }, filter), sort, seed)
         }
+    }
+
+    fun unlock() {
+        lockedUnlocked.value = true
+        reloadLocked()
+    }
+
+    fun relock() {
+        lockedUnlocked.value = false
+        locked.value = emptyList()
+    }
+
+    fun reloadLocked() {
+        if (!lockedUnlocked.value) return
+        viewModelScope.launch { locked.value = lockedStore.load() }
+    }
 
     private var started = false
 
@@ -86,7 +142,11 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             MediaEvents.events.collect { event ->
                 when (event) {
+                    is MediaEvents.Event.Favorited -> all.update { list ->
+                        list.map { if (it.id in event.ids) it.copy(favorite = event.favorite) else it }
+                    }
                     is MediaEvents.Event.Removed -> {
+                        locked.update { list -> list.filter { it.id !in event.ids } }
                         all.update { list -> list.filter { it.id !in event.ids } }
                         trash.update { list -> list.filter { it.id !in event.ids } }
                         reloadTrash()
@@ -97,7 +157,10 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
                         replacedAt[event.id] = now
                         all.update { list -> list.map { if (it.id == event.id) it.copy(dateModified = now) else it } }
                     }
-                    MediaEvents.Event.Changed -> reload()
+                    MediaEvents.Event.Changed -> {
+                        reload()
+                        reloadLocked()
+                    }
                 }
             }
         }

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    "Outlined Bauhaus": basic shapes drawn as ink outlines (4 units, round joins), plus one solid shape
+    in the app's accent color. Dark version: light lines, brighter sun (#EA6B49).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFEA6B49"
+        android:pathData="M65,34.5 A7.5,7.5 0 1 1 65,49.5 A7.5,7.5 0 1 1 65,34.5 Z" />
+    <path
+        android:pathData="M32,73 L46,54 L60,73 Z"
+        android:strokeColor="#FFF3EFE8"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M56,67.6 L65,58 L76,73"
+        android:strokeColor="#FFF3EFE8"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:strokeLineCap="round" />
+</vector>

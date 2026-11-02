@@ -4,20 +4,24 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <ul>
 <li><b>Photos</b>: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns.</li>
 <li><b>Albums</b>: your folders, sorted by date modified, date created or name, with search.</li>
-<li>Full-screen viewer with pinch and double-tap zoom, and a video player. Swipe up or down to close.</li>
+<li><b>Collections</b>: On this day (photos taken on today's date in previous years), Favorites, all Photos, all Videos, Trash and the Locked folder.</li>
+<li>Fast scroller: drag the scrollbar to jump to any month.</li>
+<li>Full-screen viewer with pinch and double-tap zoom, a video player, a slideshow and detailed info (camera, exposure, location). Swipe up or down to close.</li>
 </ul>
 
 <b>Organize</b>
 <ul>
 <li>Long-press then drag to select many items at once. The grid scrolls by itself when you reach the edge.</li>
 <li>Select a whole day, or everything, in one tap.</li>
-<li>Move items to another folder or to a new one (with folder search), share them, or send them to the trash, where they can be restored for 30 days.</li>
+<li>Favorite, move or copy items to another folder or to a new album (with folder search), rename, share, or send them to the trash, where they can be restored for 30 days.</li>
+<li><b>Locked folder</b>: hide photos and videos from the gallery and other apps, behind your fingerprint or screen lock.</li>
+<li>Set a photo as wallpaper or contact picture.</li>
 </ul>
 
 <b>Edit</b>
 <ul>
-<li>Photos: crop (free or fixed ratio), rotate, straighten by any angle, mirror. Photo details (date, camera, location) are kept.</li>
-<li>Videos: trim with a live preview, crop, rotate, mirror, and export short clips (up to 15 seconds) as animated GIFs, up to 50 fps and 1080 px.</li>
+<li>Photos: crop (free or fixed ratio), rotate, straighten by any angle, mirror, adjust light, contrast, color and warmth, draw, and pixelate faces or text to hide them. Photo details (date, camera, location) are kept.</li>
+<li>Videos: trim with a live preview, crop, rotate, mirror, change speed, remove the sound, save a frame as a photo, and export short clips (up to 15 seconds) as animated GIFs, up to 50 fps and 1080 px.</li>
 <li>GIFs: crop, rotate, mirror, change speed and looping. Animated GIFs play in the viewer.</li>
 <li>Open and edit images from other apps (Edit with, Open with, Share).</li>
 <li>Save as a copy or replace the original. Choose each time, or set a default, separately for photos and videos.</li>
@@ -27,6 +31,7 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <ul>
 <li>No internet permission: nothing ever leaves your phone.</li>
 <li>No ads, no trackers, no analytics.</li>
+<li>Optionally remove the location from photos you share.</li>
 <li>Optional "media management" permission (Android 12+) to edit, move and delete without a confirmation every time.</li>
 </ul>
 

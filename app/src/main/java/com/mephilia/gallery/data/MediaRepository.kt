@@ -104,6 +104,7 @@ class MediaRepository(context: Context) {
             MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
             MediaStore.MediaColumns.RELATIVE_PATH,
             MediaStore.MediaColumns.DATE_EXPIRES,
+            MediaStore.MediaColumns.IS_FAVORITE,
         )
         val selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
         val args = arrayOf(
@@ -134,6 +135,7 @@ class MediaRepository(context: Context) {
             val bucketNameCol = c.getColumnIndexOrThrow(projection[12])
             val pathCol = c.getColumnIndexOrThrow(projection[13])
             val expiresCol = c.getColumnIndexOrThrow(projection[14])
+            val favCol = c.getColumnIndexOrThrow(projection[15])
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
                 val isVideo = c.getInt(typeCol) == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
@@ -159,6 +161,7 @@ class MediaRepository(context: Context) {
                         ?: c.getString(pathCol)?.trimEnd('/')?.substringAfterLast('/').orEmpty(),
                     relativePath = c.getString(pathCol) ?: "",
                     expiresAt = c.getLong(expiresCol) * 1000,
+                    favorite = c.getInt(favCol) == 1,
                 )
             }
         }

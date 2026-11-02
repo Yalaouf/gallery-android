@@ -7,7 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.mephilia.gallery.ui.GalleryRoot
 import com.mephilia.gallery.ui.theme.GalleryTheme
 
-class MainActivity : ComponentActivity() {
+class GalleryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)

@@ -32,6 +32,9 @@ data class PhotoEdits(
      * The image is zoomed in so the corners never show empty areas; [crop] is relative to that zoomed image.
      */
     val angle: Float = 0f,
+    val adjust: Adjustments = Adjustments(),
+    /** Drawings and hidden areas, applied last, on the cropped image. */
+    val marks: List<Mark> = emptyList(),
 )
 
 /** Largest scale at which a w × h image, rotated by [angle] degrees, still covers a w × h frame. */
@@ -137,8 +140,10 @@ suspend fun renderPhoto(context: Context, item: MediaItem, edits: PhotoEdits, ou
     withContext(Dispatchers.Default) {
         val format = outputFormatFor(item.mimeType)
         val src = decodeBitmap(context, item.uri)
-        val result = src.applyEdits(edits)
-        if (result !== src) src.recycle()
+        val geometry = src.applyEdits(edits)
+        if (geometry !== src) src.recycle()
+        val result = geometry.withEffects(edits.adjust, edits.marks)
+        if (result !== geometry) geometry.recycle()
         withContext(Dispatchers.IO) {
             val settings = AppSettings.current
             out.outputStream().use { result.compress(format.format, settings.jpegQuality, it) }

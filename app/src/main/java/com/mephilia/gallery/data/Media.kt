@@ -22,6 +22,9 @@ data class MediaItem(
     val relativePath: String,
     /** For trashed items, when Android deletes them for good (ms); 0 otherwise. */
     val expiresAt: Long = 0,
+    val favorite: Boolean = false,
+    /** Stored in the app's locked folder (private storage, not in MediaStore). */
+    val locked: Boolean = false,
 )
 
 data class Album(

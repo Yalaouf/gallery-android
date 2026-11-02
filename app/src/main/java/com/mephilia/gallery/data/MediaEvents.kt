@@ -14,6 +14,7 @@ object MediaEvents {
         data class Replaced(val id: Long) : Event
         /** New or moved files: reload now. */
         data object Changed : Event
+        data class Favorited(val ids: Set<Long>, val favorite: Boolean) : Event
     }
 
     private val flow = MutableSharedFlow<Event>(extraBufferCapacity = 16)
@@ -22,4 +23,5 @@ object MediaEvents {
     fun removed(ids: Collection<Long>) = flow.tryEmit(Event.Removed(ids.toSet()))
     fun replaced(id: Long) = flow.tryEmit(Event.Replaced(id))
     fun changed() = flow.tryEmit(Event.Changed)
+    fun favorited(ids: Collection<Long>, favorite: Boolean) = flow.tryEmit(Event.Favorited(ids.toSet(), favorite))
 }

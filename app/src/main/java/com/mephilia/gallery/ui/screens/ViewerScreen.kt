@@ -1,5 +1,37 @@
 package com.mephilia.gallery.ui.screens
 
+import com.mephilia.gallery.ui.components.toggleFavorite
+import com.mephilia.gallery.ui.components.deleteLocked
+import com.mephilia.gallery.ui.components.restoreFromLocked
+import com.mephilia.gallery.ui.components.moveToLocked
+import com.mephilia.gallery.ui.components.ConfirmLockDialog
+import com.mephilia.gallery.ui.components.AccessDeniedException
+import com.mephilia.gallery.ui.components.MediaAccess
+import com.mephilia.gallery.data.MediaWriter
+import com.mephilia.gallery.data.readDetails
+import com.mephilia.gallery.data.MediaDetails
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.runtime.produceState
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.DriveFileRenameOutline
+import androidx.compose.material.icons.rounded.FileCopy
+import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.Slideshow
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Favorite
+import java.util.Locale
+import android.widget.Toast
+import android.provider.MediaStore
+import android.net.Uri
+import android.content.Intent
 import android.app.Activity
 import android.text.format.Formatter
 import androidx.annotation.OptIn
@@ -158,6 +190,30 @@ fun ViewerScreen(
     val albums by vm.albums.collectAsStateWithLifecycle()
     val current = list.getOrNull(pager.currentPage.coerceIn(0, list.lastIndex)) ?: list.first()
     val context = LocalContext.current
+    val lockedMode = current.locked
+    var menu by remember { mutableStateOf(false) }
+    var showCopy by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
+    var confirmLock by remember { mutableStateOf(false) }
+    var confirmDeleteLocked by remember { mutableStateOf(false) }
+
+    // Slideshow: moves to the next item every few seconds, bars hidden and screen kept on. A tap stops it.
+    var slideshow by remember { mutableStateOf(false) }
+    val view = LocalView.current
+    DisposableEffect(slideshow) {
+        view.keepScreenOn = slideshow
+        onDispose { view.keepScreenOn = false }
+    }
+    LaunchedEffect(slideshow) {
+        if (!slideshow) return@LaunchedEffect
+        showBars = false
+        while (true) {
+            delay(AppSettings.current.slideshowSeconds * 1000L)
+            val next = (pager.currentPage + 1) % list.size
+            if (next == 0) pager.scrollToPage(0) else pager.animateScrollToPage(next)
+        }
+    }
+    val onPageTap: () -> Unit = { if (slideshow) { slideshow = false; showBars = true } else showBars = !showBars }
 
     SystemBars(lightIcons = false, hidden = !showBars)
 
@@ -231,11 +287,11 @@ fun ViewerScreen(
                     muted = muted,
                     showControls = showBars,
                     controlsBottomPadding = bottomBarHeight,
-                    onTap = { showBars = !showBars },
+                    onTap = onPageTap,
                     onAutoHide = { showBars = false },
                 )
             } else {
-                PhotoPage(item = item, onTap = { showBars = !showBars })
+                PhotoPage(item = item, onTap = onPageTap)
             }
         }
 
@@ -269,6 +325,49 @@ fun ViewerScreen(
                         )
                     }
                 }
+                if (!trashMode && !lockedMode && current.uri.authority == MediaStore.AUTHORITY) {
+                    IconButton(onClick = { scope.launch { toggleFavorite(access, listOf(current)) } }) {
+                        Icon(
+                            if (current.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            stringResource(if (current.favorite) R.string.action_unfavorite else R.string.action_favorite),
+                            tint = if (current.favorite) Color(0xFFFF6B6B) else Color.White,
+                        )
+                    }
+                }
+                if (!trashMode) Box {
+                    IconButton(onClick = { menu = true }) {
+                        Icon(Icons.Rounded.MoreVert, stringResource(R.string.action_more), tint = Color.White)
+                    }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        if (list.size > 1) DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_slideshow)) },
+                            leadingIcon = { Icon(Icons.Rounded.Slideshow, null) },
+                            onClick = { menu = false; slideshow = true },
+                        )
+                        if (!lockedMode && !current.isVideo) DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_set_as)) },
+                            leadingIcon = { Icon(Icons.Rounded.Wallpaper, null) },
+                            onClick = { menu = false; setAs(context, current) },
+                        )
+                        if (!lockedMode && current.uri.authority == MediaStore.AUTHORITY) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_copy_to)) },
+                                leadingIcon = { Icon(Icons.Rounded.FileCopy, null) },
+                                onClick = { menu = false; showCopy = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_rename)) },
+                                leadingIcon = { Icon(Icons.Rounded.DriveFileRenameOutline, null) },
+                                onClick = { menu = false; showRename = true },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_move_to_locked)) },
+                                leadingIcon = { Icon(Icons.Rounded.Lock, null) },
+                                onClick = { menu = false; confirmLock = true },
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -283,6 +382,22 @@ fun ViewerScreen(
                     .navigationBarsPadding()
                     .padding(bottom = 16.dp),
             )
+        } else if (lockedMode) AnimatedVisibility(showBars, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { bottomBarHeight = with(density) { it.height.toDp() } }
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
+                    .navigationBarsPadding()
+                    .padding(top = 24.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                ViewerAction(Icons.Rounded.LockOpen, stringResource(R.string.action_unlock_item)) {
+                    scope.launch { restoreFromLocked(context, listOf(current)) }
+                }
+                ViewerAction(Icons.Rounded.Info, stringResource(R.string.action_info)) { showInfo = true }
+                ViewerAction(Icons.Rounded.DeleteForever, stringResource(R.string.action_delete_forever)) { confirmDeleteLocked = true }
+            }
         } else AnimatedVisibility(showBars, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
             Row(
                 Modifier
@@ -317,6 +432,37 @@ fun ViewerScreen(
         MoveFlow(listOf(current), albums, onDismiss = { showMove = false }, onMoved = { showMove = false })
     }
 
+    if (showCopy) {
+        MoveFlow(listOf(current), albums, onDismiss = { showCopy = false }, onMoved = { showCopy = false }, copy = true)
+    }
+
+    if (showRename) {
+        RenameDialog(current, access, onDismiss = { showRename = false })
+    }
+
+    if (confirmLock) {
+        ConfirmLockDialog(1, onDismiss = { confirmLock = false }) {
+            confirmLock = false
+            scope.launch { moveToLocked(context, access, listOf(current)) }
+        }
+    }
+
+    if (confirmDeleteLocked) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteLocked = false },
+            icon = { Icon(Icons.Rounded.DeleteForever, null) },
+            title = { Text(pluralStringResource(R.plurals.delete_forever_title, 1, 1)) },
+            text = { Text(stringResource(R.string.delete_locked_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeleteLocked = false
+                    scope.launch { deleteLocked(context, listOf(current)) }
+                }) { Text(stringResource(R.string.action_delete_forever)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDeleteLocked = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
+    }
+
     if (showInfo) {
         ModalBottomSheet(onDismissRequest = { showInfo = false }) {
             Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding().padding(bottom = 24.dp)) {
@@ -329,6 +475,25 @@ fun ViewerScreen(
                 InfoRow(stringResource(R.string.info_size), Formatter.formatFileSize(context, current.size))
                 if (current.isVideo) InfoRow(stringResource(R.string.info_duration), formatDuration(current.durationMs))
                 InfoRow(stringResource(R.string.info_type), current.mimeType)
+                val details by produceState<MediaDetails?>(null, current.id, current.dateModified) {
+                    value = readDetails(context, current)
+                }
+                details?.let { d ->
+                    d.camera?.let { InfoRow(stringResource(R.string.info_camera), it) }
+                    d.lens?.let { InfoRow(stringResource(R.string.info_lens), it) }
+                    d.exposure?.let { InfoRow(stringResource(R.string.info_exposure), it) }
+                    d.frameRate?.let { InfoRow(stringResource(R.string.info_frame_rate), it) }
+                    d.bitrate?.let { InfoRow(stringResource(R.string.info_bitrate), it) }
+                    if (d.hasLocation) {
+                        val coords = String.format(Locale.ROOT, "%.5f, %.5f", d.latitude, d.longitude)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f)) { InfoRow(stringResource(R.string.info_location), coords) }
+                            TextButton(onClick = { openInMaps(context, d.latitude!!, d.longitude!!) }) {
+                                Text(stringResource(R.string.open_in_maps))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -563,4 +728,61 @@ fun SystemBars(lightIcons: Boolean, hidden: Boolean = false) {
         if (hidden) controller.hide(WindowInsetsCompat.Type.systemBars())
         else controller.show(WindowInsetsCompat.Type.systemBars())
     }
+}
+
+/** "Set as" wallpaper, contact photo… handled by the apps that support it. */
+private fun setAs(context: android.content.Context, item: MediaItem) {
+    val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
+        setDataAndType(item.uri, item.mimeType)
+        putExtra("mimeType", item.mimeType)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    runCatching { context.startActivity(Intent.createChooser(intent, context.getString(R.string.action_set_as))) }
+}
+
+/** Opens a maps app at the given place. Gallery itself never goes online. */
+private fun openInMaps(context: android.content.Context, lat: Double, lon: Double) {
+    val geo = String.format(Locale.ROOT, "geo:%.6f,%.6f?q=%.6f,%.6f", lat, lon, lat, lon)
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(geo))) }.onFailure {
+        Toast.makeText(context, context.getString(R.string.no_maps_app), Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+private fun RenameDialog(item: MediaItem, access: MediaAccess, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val ext = item.name.substringAfterLast('.', "")
+    var name by remember { mutableStateOf(item.name.substringBeforeLast('.', item.name)) }
+    val valid = name.isNotBlank() && name.none { it in "/\\:*?\"<>|" } && !name.startsWith(".")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.DriveFileRenameOutline, null) },
+        title = { Text(stringResource(R.string.action_rename)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                singleLine = true,
+                suffix = if (ext.isNotEmpty()) ({ Text(".$ext") }) else null,
+                isError = name.isNotEmpty() && !valid,
+            )
+        },
+        confirmButton = {
+            TextButton(enabled = valid, onClick = {
+                scope.launch {
+                    try {
+                        val writer = MediaWriter(context)
+                        access.write(listOf(item.uri)) { writer.rename(item, name.trim()) }
+                        MediaEvents.changed()
+                        onDismiss()
+                    } catch (_: AccessDeniedException) {
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message ?: context.getString(R.string.error_rename), Toast.LENGTH_LONG).show()
+                    }
+                }
+            }) { Text(stringResource(R.string.action_rename)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }

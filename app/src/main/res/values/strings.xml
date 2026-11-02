@@ -143,8 +143,6 @@
     <string name="pure_black">Pure black</string>
     <string name="pure_black_desc">Black background in dark theme, ideal for OLED screens</string>
     <string name="settings_startup">Startup</string>
-    <string name="start_photos">Open on Photos</string>
-    <string name="start_albums">Open on Albums</string>
     <string name="settings_videos">Videos</string>
     <string name="autoplay">Autoplay</string>
     <string name="autoplay_desc">Start the video as soon as it opens</string>
@@ -212,4 +210,95 @@
     <string name="gif_open_failed">This GIF can\'t be opened</string>
     <string name="pause">Pause</string>
     <string name="gif_heavy_warning">Large GIFs can weigh tens of megabytes and take a few minutes to create.</string>
+    <string name="app_version">Version %1$s</string>
+    <string name="error_rename">Couldn\'t rename the file</string>
+    <string name="lock_failed">Couldn\'t move to the locked folder</string>
+    <plurals name="moved_to_locked">
+        <item quantity="one">%1$d item moved to the locked folder</item>
+        <item quantity="other">%1$d items moved to the locked folder</item>
+    </plurals>
+    <plurals name="restored_from_locked">
+        <item quantity="one">%1$d item put back in the gallery</item>
+        <item quantity="other">%1$d items put back in the gallery</item>
+    </plurals>
+    <string name="action_favorite">Favorite</string>
+    <string name="action_more">More</string>
+    <string name="action_copy_to">Copy to…</string>
+    <string name="action_move_to_locked">Move to locked folder</string>
+    <plurals name="lock_title">
+        <item quantity="one">Move %1$d item to the locked folder?</item>
+        <item quantity="other">Move %1$d items to the locked folder?</item>
+    </plurals>
+    <string name="lock_text">They will be hidden from the gallery and other apps, and only visible after unlocking with your fingerprint or screen lock. Locked items are deleted if you uninstall the app, and aren\'t included in cloud backups.</string>
+    <plurals name="copied_to">
+        <item quantity="one">%1$d item copied to %2$s</item>
+        <item quantity="other">%1$d items copied to %2$s</item>
+    </plurals>
+    <plurals name="copy_failed">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <plurals name="copy_title">
+        <item quantity="one">Copy %1$d item to…</item>
+        <item quantity="other">Copy %1$d items to…</item>
+    </plurals>
+    <string name="copy_here">Copy here</string>
+    <string name="action_unfavorite">Remove from favorites</string>
+    <string name="action_slideshow">Slideshow</string>
+    <string name="action_set_as">Set as…</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_unlock_item">Unhide</string>
+    <string name="delete_locked_text">This item will be deleted for good. It can\'t be restored.</string>
+    <string name="info_camera">Camera</string>
+    <string name="info_lens">Lens</string>
+    <string name="info_exposure">Exposure</string>
+    <string name="info_frame_rate">Frame rate</string>
+    <string name="info_bitrate">Bitrate</string>
+    <string name="info_location">Location</string>
+    <string name="open_in_maps">Open in Maps</string>
+    <string name="no_maps_app">No maps app installed</string>
+    <string name="locked_title">Locked folder</string>
+    <string name="locked_prompt">Unlock to see your hidden photos and videos</string>
+    <string name="locked_empty">Nothing here yet. Select photos or videos and choose "Move to locked folder" in the ⋮ menu to hide them here.</string>
+    <string name="locked_explainer">Photos and videos here are hidden from the gallery and other apps. They stay on this phone only: not in cloud backups, and deleted if you uninstall the app.</string>
+    <string name="locked_no_screen_lock">Set up a screen lock (PIN, pattern, password or fingerprint) in Android\'s settings to use the locked folder.</string>
+    <string name="locked_unlock">Unlock</string>
+    <string name="new_album_pick">Choose the photos and videos to add</string>
+    <string name="favorites_title">Favorites</string>
+    <string name="new_album">New album</string>
+    <string name="new_album_hint">Created in Pictures. Next, choose the photos and videos to move or copy into it.</string>
+    <string name="action_next">Next</string>
+    <string name="on_this_day">On this day</string>
+    <plurals name="years_ago">
+        <item quantity="one">%1$d year ago</item>
+        <item quantity="other">%1$d years ago</item>
+    </plurals>
+    <string name="on_this_day_desc">Show photos from this day in previous years at the top of Photos</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="strip_location_share">Remove location when sharing</string>
+    <string name="strip_location_share_desc">Shared photos are sent as copies without GPS data. Videos are shared as they are.</string>
+    <string name="slideshow_delay">Time per photo</string>
+    <string name="seconds_short">%1$d s</string>
+    <string name="tool_adjust">Adjust</string>
+    <string name="tool_draw">Draw</string>
+    <string name="tool_hide">Hide</string>
+    <string name="adjust_brightness">Light</string>
+    <string name="adjust_contrast">Contrast</string>
+    <string name="adjust_saturation">Color</string>
+    <string name="adjust_warmth">Warmth</string>
+    <string name="hide_hint">Paint over faces, plates or text to pixelate them</string>
+    <string name="action_undo">Undo</string>
+    <string name="brush_size">Size</string>
+    <string name="tool_speed">Speed</string>
+    <string name="remove_sound">Remove sound</string>
+    <string name="save_frame">Save this frame as a photo</string>
+    <string name="frame_saved">Frame saved as a photo</string>
+    <string name="frame_failed">Couldn\'t save this frame</string>
+    <string name="tab_collections">Collections</string>
+    <string name="on_this_day_none">Nothing today</string>
+    <string name="app_icon">App icon</string>
+    <string name="icon_auto">Automatic</string>
+    <string name="icon_light">Light</string>
+    <string name="icon_dark">Dark</string>
+    <string name="app_icon_desc">Automatic follows the system theme, on launchers that support it. Changing the icon can take a few seconds, and some launchers remove the icon from the home screen: add it back from the app list.</string>
 </resources>

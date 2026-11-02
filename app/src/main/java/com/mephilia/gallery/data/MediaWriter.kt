@@ -88,6 +88,42 @@ class MediaWriter(private val context: Context) {
     var lastMoveFailures = 0
         private set
 
+    /** Copies items to [relativePath]. Returns the number of failures. Needs no write access. */
+    suspend fun copy(items: List<MediaItem>, relativePath: String): Int = withContext(Dispatchers.IO) {
+        items.count { item ->
+            val isVideo = item.isVideo
+            val collection = if (isVideo) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            else MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val uri = tryInsert(collection, item.name, item.mimeType, relativePath) ?: return@count true
+            try {
+                resolver.openInputStream(item.uri)!!.use { input ->
+                    resolver.openFileDescriptor(uri, "w")!!.use { pfd ->
+                        FileOutputStream(pfd.fileDescriptor).use { out ->
+                            input.copyTo(out)
+                            out.flush()
+                            out.fd.sync()
+                        }
+                    }
+                }
+                resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                false
+            } catch (_: Exception) {
+                resolver.delete(uri, null, null)
+                true
+            }
+        }
+    }
+
+    /** Renames a file, keeping its extension. Throws SecurityException without write access. */
+    suspend fun rename(item: MediaItem, newBaseName: String) = withContext(Dispatchers.IO) {
+        val ext = item.name.substringAfterLast('.', "")
+        val name = if (ext.isEmpty()) newBaseName else "$newBaseName.$ext"
+        val updated = resolver.update(
+            item.uri, ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, name) }, null, null,
+        )
+        if (updated == 0) error(context.getString(R.string.error_rename))
+    }
+
     fun tempFile(extension: String): File =
         File(context.cacheDir, "edit_${System.currentTimeMillis()}.$extension")
 

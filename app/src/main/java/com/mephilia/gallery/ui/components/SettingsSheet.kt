@@ -1,5 +1,7 @@
 package com.mephilia.gallery.ui.components
 
+import com.mephilia.gallery.data.AppIcon
+import androidx.compose.ui.text.style.TextAlign
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -95,16 +97,72 @@ fun SettingsSheet(onDismiss: () -> Unit) {
                 AppSettings.update { it.copy(pureBlack = v) }
             }
 
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.app_icon), style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(8.dp))
+            var appIcon by remember { mutableStateOf(AppIcon.current(context)) }
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                AppIcon.entries.forEachIndexed { i, icon ->
+                    SegmentedButton(
+                        selected = appIcon == icon,
+                        onClick = {
+                            if (appIcon != icon) {
+                                AppIcon.set(context, icon)
+                                appIcon = icon
+                            }
+                        },
+                        shape = SegmentedButtonDefaults.itemShape(i, AppIcon.entries.size),
+                    ) { Text(stringResource(icon.label)) }
+                }
+            }
+            Text(
+                stringResource(R.string.app_icon_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+
             SettingsTitle(stringResource(R.string.settings_startup))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                listOf(stringResource(R.string.start_photos), stringResource(R.string.start_albums)).forEachIndexed { i, label ->
+                listOf(
+                    stringResource(R.string.tab_photos),
+                    stringResource(R.string.tab_albums),
+                    stringResource(R.string.tab_collections),
+                ).forEachIndexed { i, label ->
                     SegmentedButton(
                         selected = s.startTab == i,
                         onClick = { AppSettings.update { it.copy(startTab = i) } },
-                        shape = SegmentedButtonDefaults.itemShape(i, 2),
-                    ) { Text(label) }
+                        shape = SegmentedButtonDefaults.itemShape(i, 3),
+                    ) { Text(label, maxLines = 1) }
                 }
             }
+
+            SwitchRow(stringResource(R.string.on_this_day), stringResource(R.string.on_this_day_desc), s.showOnThisDay) { v ->
+                AppSettings.update { it.copy(showOnThisDay = v) }
+            }
+
+            SettingsTitle(stringResource(R.string.settings_privacy))
+            SwitchRow(
+                stringResource(R.string.strip_location_share),
+                stringResource(R.string.strip_location_share_desc),
+                s.stripLocationOnShare,
+            ) { v -> AppSettings.update { it.copy(stripLocationOnShare = v) } }
+
+            SettingsTitle(stringResource(R.string.action_slideshow))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.slideshow_delay), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.seconds_short, s.slideshowSeconds),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Slider(
+                value = s.slideshowSeconds.toFloat(),
+                onValueChange = { v -> AppSettings.update { it.copy(slideshowSeconds = v.roundToInt()) } },
+                valueRange = 2f..10f,
+                steps = 7,
+            )
 
             SettingsTitle(stringResource(R.string.settings_videos))
             SwitchRow(stringResource(R.string.autoplay), stringResource(R.string.autoplay_desc), s.autoplayVideos) { v ->
@@ -171,6 +229,19 @@ fun SettingsSheet(onDismiss: () -> Unit) {
                         )
                     }) { Text(stringResource(R.string.action_allow)) }
                 }
+            }
+
+            val version = remember {
+                runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull()
+            }
+            if (version != null) {
+                Text(
+                    stringResource(R.string.app_version, version),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 32.dp, bottom = 8.dp),
+                )
             }
         }
     }

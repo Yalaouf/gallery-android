@@ -1,5 +1,15 @@
 package com.mephilia.gallery.ui.editor
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.Switch
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.PhotoCamera
 import android.graphics.Bitmap
 import android.view.TextureView
 import androidx.annotation.OptIn
@@ -76,7 +86,9 @@ import kotlin.math.roundToInt
 import android.widget.Toast
 import androidx.compose.material.icons.rounded.GifBox
 
-private enum class VideoTool { Trim, Crop, Rotate }
+private enum class VideoTool { Trim, Crop, Rotate, Speed }
+
+private val speeds = listOf(0.25f, 0.5f, 1f, 1.5f, 2f, 4f)
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -115,6 +127,9 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     /** Clockwise quarter turns; the mirror is applied after the rotation. */
     var quarterTurns by remember { mutableIntStateOf(0) }
     var flipH by remember { mutableStateOf(false) }
+    var speed by remember { mutableStateOf(1f) }
+    var removeAudio by remember { mutableStateOf(false) }
+    LaunchedEffect(speed) { player.setPlaybackSpeed(speed) }
     var scrubMs by remember { mutableStateOf<Long?>(null) }
     var presetIndex by remember { mutableStateOf(0) }
     var saving by remember { mutableStateOf(false) }
@@ -139,7 +154,8 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
     val duration = info?.durationMs ?: 0L
     val trimmed = startMs > 0 || (endMs in 1 until duration)
     val edited = trimmed || crop != FullCrop ||
-        quarterTurns.mod(4) != 0 || flipH
+        quarterTurns.mod(4) != 0 || flipH || speed != 1f || removeAudio
+    val scope = rememberCoroutineScope()
 
     fun rotate(delta: Int) {
         quarterTurns += delta
@@ -158,6 +174,23 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
         },
         saveEnabled = info != null && edited && !saving,
         actions = {
+            IconButton(
+                enabled = info != null && !saving,
+                onClick = {
+                    player.pause()
+                    val at = player.currentPosition
+                    scope.launch {
+                        val ok = runCatching {
+                            saveVideoFrame(context, item, at, PhotoEdits(quarterTurns, flipH, crop))
+                        }.isSuccess
+                        Toast.makeText(
+                            context,
+                            context.getString(if (ok) R.string.frame_saved else R.string.frame_failed),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
+            ) { Icon(Icons.Rounded.PhotoCamera, stringResource(R.string.save_frame), tint = Color.White) }
             IconButton(
                 enabled = info != null && !saving,
                 onClick = {
@@ -294,6 +327,36 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                     presetIndex = presets.indexOf(it)
                     crop = centeredCrop(it.ratio, ratio)
                 }
+            } else if (tool == VideoTool.Speed) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(speeds) { s ->
+                        FilterChip(
+                            selected = speed == s,
+                            onClick = { speed = s },
+                            label = { Text(formatSpeed(s)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = Color.White.copy(alpha = 0.08f),
+                                labelColor = Color.White,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
+                            border = null,
+                        )
+                    }
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { removeAudio = !removeAudio }
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.remove_sound), color = Color.White, modifier = Modifier.weight(1f))
+                    Switch(checked = removeAudio, onCheckedChange = { removeAudio = it })
+                }
             } else {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     ToolButton(Icons.AutoMirrored.Rounded.RotateLeft, stringResource(R.string.tool_left)) { rotate(-1) }
@@ -315,7 +378,12 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
                 ToolButton(Icons.Rounded.Rotate90DegreesCw, stringResource(R.string.tool_rotate), selected = tool == VideoTool.Rotate, active = quarterTurns.mod(4) != 0 || flipH) {
                     tool = VideoTool.Rotate
                 }
+                ToolButton(Icons.Rounded.Speed, stringResource(R.string.tool_speed), selected = tool == VideoTool.Speed, active = speed != 1f || removeAudio) {
+                    tool = VideoTool.Speed
+                }
                 ToolButton(Icons.Rounded.RestartAlt, stringResource(R.string.tool_reset)) {
+                    speed = 1f
+                    removeAudio = false
                     startMs = 0
                     endMs = duration
                     crop = FullCrop
@@ -347,7 +415,7 @@ fun VideoEditorScreen(item: MediaItem, onClose: () -> Unit) {
         produce = { onProgress ->
             exportVideo(
                 context, item.uri, startMs, endMs, duration, quarterTurns, flipH, crop,
-                MediaWriter(context).tempFile("mp4"), onProgress,
+                MediaWriter(context).tempFile("mp4"), onProgress, speed = speed, removeAudio = removeAudio,
             )
         },
         onSaved = {
@@ -404,3 +472,5 @@ private fun togglePlay(player: Player, startMs: Long, endMs: Long) {
         player.play()
     }
 }
+
+private fun formatSpeed(s: Float) = (if (s == s.toInt().toFloat()) "${s.toInt()}" else "$s") + "×"

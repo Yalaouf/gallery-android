@@ -1,5 +1,7 @@
 package com.mephilia.gallery.ui.screens
 
+import com.mephilia.gallery.data.FAVORITES_ID
+import com.mephilia.gallery.data.ON_THIS_DAY_ID
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -99,7 +101,10 @@ fun AlbumScreen(
                     IconButton(onClick = { selection.selectAll(items) }, enabled = items.isNotEmpty()) {
                         Icon(Icons.Rounded.Checklist, stringResource(R.string.action_select_all))
                     }
-                    IconButton(onClick = { showOptions = true }) { Icon(Icons.Rounded.Tune, stringResource(R.string.action_sort_filter)) }
+                    // Pseudo albums have their own order (favorites by date)
+                    if (bucketId != FAVORITES_ID && bucketId != ON_THIS_DAY_ID) {
+                        IconButton(onClick = { showOptions = true }) { Icon(Icons.Rounded.Tune, stringResource(R.string.action_sort_filter)) }
+                    }
                 },
                 scrollBehavior = scroll,
             )
@@ -112,7 +117,7 @@ fun AlbumScreen(
                 MediaGrid(
                     items = items,
                     columns = columns,
-                    groupByDate = sort == MediaSort.DateDesc || sort == MediaSort.DateAsc,
+                    groupByDate = bucketId == FAVORITES_ID || bucketId == ON_THIS_DAY_ID || sort == MediaSort.DateDesc || sort == MediaSort.DateAsc,
                     state = gridState,
                     contentPadding = PaddingValues(
                         bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp,

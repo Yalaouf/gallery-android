@@ -4,20 +4,24 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <ul>
 <li><b>Photos</b> : tout est regroupé par jour. Triez par date, nom, taille ou au hasard, affichez seulement les photos ou les vidéos, choisissez de 2 à 6 colonnes.</li>
 <li><b>Albums</b> : vos dossiers, triés par date de modification, date de création ou nom, avec recherche.</li>
-<li>Visionneuse plein écran avec zoom (pincer ou double-tap) et lecteur vidéo. Glissez vers le haut ou le bas pour fermer.</li>
+<li><b>Collections</b> : Ce jour-là (les photos prises à la même date les années précédentes), Favoris, toutes les Photos, toutes les Vidéos, Corbeille et Dossier verrouillé.</li>
+<li>Défilement rapide : faites glisser la barre de défilement pour aller à n'importe quel mois.</li>
+<li>Visionneuse plein écran avec zoom (pincer ou double-tap), lecteur vidéo, diaporama et informations détaillées (appareil, exposition, lieu). Glissez vers le haut ou le bas pour fermer.</li>
 </ul>
 
 <b>Organiser</b>
 <ul>
 <li>Appui long puis glissement pour sélectionner beaucoup d'éléments d'un coup. La grille défile toute seule quand on atteint le bord.</li>
 <li>Sélectionnez une journée entière, ou tout, en un geste.</li>
-<li>Déplacez vers un autre dossier ou un nouveau (avec recherche de dossier), partagez, ou mettez à la corbeille, d'où ils peuvent être restaurés pendant 30 jours.</li>
+<li>Ajoutez aux favoris, déplacez ou copiez vers un autre dossier ou un nouvel album (avec recherche de dossier), renommez, partagez, ou mettez à la corbeille, d'où ils peuvent être restaurés pendant 30 jours.</li>
+<li><b>Dossier verrouillé</b> : masquez des photos et vidéos de la galerie et des autres applications, derrière votre empreinte ou votre verrouillage d'écran.</li>
+<li>Définissez une photo comme fond d'écran ou photo de contact.</li>
 </ul>
 
 <b>Retoucher</b>
 <ul>
-<li>Photos : recadrage (libre ou format fixe), rotation, redressement selon n'importe quel angle, miroir. Les informations de la photo (date, appareil, position) sont conservées.</li>
-<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir, et export des extraits courts (jusqu'à 15 secondes) en GIF animé, jusqu'à 50 images par seconde et 1080 px.</li>
+<li>Photos : recadrage (libre ou format fixe), rotation, redressement selon n'importe quel angle, miroir, réglage de la lumière, du contraste, des couleurs et de la chaleur, dessin, et pixelisation des visages ou textes pour les masquer. Les informations de la photo (date, appareil, position) sont conservées.</li>
+<li>Vidéos : découpage avec aperçu en direct, recadrage, rotation, miroir, vitesse, suppression du son, enregistrement d'une image en photo, et export des extraits courts (jusqu'à 15 secondes) en GIF animé, jusqu'à 50 images par seconde et 1080 px.</li>
 <li>GIF : recadrage, rotation, miroir, vitesse et boucle. Les GIF animés sont lus dans la visionneuse.</li>
 <li>Ouvrez et modifiez des images depuis d'autres applications (Modifier avec, Ouvrir avec, Partager).</li>
 <li>Enregistrez une copie ou remplacez l'original. Choisissez à chaque fois, ou définissez un choix par défaut, séparément pour les photos et les vidéos.</li>
@@ -27,6 +31,7 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <ul>
 <li>Aucune permission internet : rien ne quitte votre téléphone.</li>
 <li>Pas de publicité, pas de traceur, pas de statistiques.</li>
+<li>Option pour retirer le lieu des photos que vous partagez.</li>
 <li>Permission facultative « gestion des médias » (Android 12+) pour modifier, déplacer et supprimer sans confirmation à chaque fois.</li>
 </ul>
 

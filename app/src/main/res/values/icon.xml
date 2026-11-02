@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Layers of the automatic launcher icon: light here, dark in values-night -->
+    <item name="ic_launcher_background_auto" type="drawable">@drawable/ic_launcher_background</item>
+    <item name="ic_launcher_foreground_auto" type="drawable">@drawable/ic_launcher_foreground</item>
+</resources>

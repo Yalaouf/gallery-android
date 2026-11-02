@@ -26,7 +26,9 @@ class ThumbFetcher(private val data: Thumb, private val options: Options) : Fetc
         val w = options.size.width.pxOrElse { 512 }.coerceIn(64, 1024)
         val h = options.size.height.pxOrElse { 512 }.coerceIn(64, 1024)
         val bitmap = try {
-            options.context.contentResolver.loadThumbnail(data.item.uri, Size(w, h), null)
+            // Locked items are private files, which have no system thumbnail
+            if (data.item.locked) decodeSmall(w, h) ?: error("Can't decode ${data.item.name}")
+            else options.context.contentResolver.loadThumbnail(data.item.uri, Size(w, h), null)
         } catch (e: Exception) {
             // No system thumbnail (e.g. trashed items): decode a small version ourselves
             decodeSmall(w, h) ?: throw e

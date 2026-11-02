@@ -11,7 +11,11 @@ import androidx.compose.ui.geometry.Rect
 import com.mephilia.gallery.R
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.Effect
+import androidx.media3.common.SpeedParameters
+import androidx.media3.common.audio.SpeedProvider
+import androidx.media3.common.C
 import androidx.media3.effect.Crop
 import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.Composition
@@ -60,7 +64,7 @@ suspend fun extractFrames(context: Context, uri: Uri, durationMs: Long, count: I
  * Exports to MP4 with Media3 Transformer. [quarterTurns] (clockwise) and [flipH] are applied
  * before [crop], which is normalized (0..1) in the displayed image.
  */
-@OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class, ExperimentalApi::class)
 suspend fun exportVideo(
     context: Context,
     uri: Uri,
@@ -72,6 +76,8 @@ suspend fun exportVideo(
     crop: Rect,
     out: File,
     onProgress: (Float) -> Unit,
+    speed: Float = 1f,
+    removeAudio: Boolean = false,
 ): File = withContext(Dispatchers.Main) {
     val clipping = MediaItem.ClippingConfiguration.Builder().apply {
         if (startMs > 0) setStartPositionMs(startMs)
@@ -87,7 +93,14 @@ suspend fun exportVideo(
         if (crop != FullCrop) add(Crop(2 * crop.left - 1, 2 * crop.right - 1, 1 - 2 * crop.bottom, 1 - 2 * crop.top))
     }
     val effects = if (videoEffects.isEmpty()) Effects.EMPTY else Effects(emptyList(), videoEffects)
-    val edited = EditedMediaItem.Builder(mediaItem).setEffects(effects).build()
+    val edited = EditedMediaItem.Builder(mediaItem).setEffects(effects).apply {
+        // Constant speed; the sound keeps its pitch
+        if (speed != 1f) setSpeed(SpeedParameters(object : SpeedProvider {
+            override fun getSpeed(timeUs: Long) = speed
+            override fun getNextSpeedChangeTimeUs(timeUs: Long) = C.TIME_UNSET
+        }, true))
+        if (removeAudio) setRemoveAudio(true)
+    }.build()
 
     suspendCancellableCoroutine { cont ->
         val handler = Handler(Looper.getMainLooper())
@@ -128,5 +141,34 @@ suspend fun exportVideo(
                 out.delete()
             }
         }
+    }
+}
+
+/**
+ * Saves the frame at [positionMs] as a JPEG photo next to the video, with the same rotation, mirror and crop
+ * as the video edit.
+ */
+suspend fun saveVideoFrame(context: Context, item: com.mephilia.gallery.data.MediaItem, positionMs: Long, edits: PhotoEdits) {
+    val frame = withContext(Dispatchers.IO) {
+        MediaMetadataRetriever().use { r ->
+            r.setDataSource(context, item.uri)
+            r.getFrameAtTime(positionMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)
+        }
+    } ?: error("No frame")
+    val result = withContext(Dispatchers.Default) { frame.applyEdits(edits) }
+    val writer = com.mephilia.gallery.data.MediaWriter(context)
+    val file = writer.tempFile("jpg")
+    try {
+        withContext(Dispatchers.IO) {
+            file.outputStream().use { result.compress(Bitmap.CompressFormat.JPEG, com.mephilia.gallery.data.AppSettings.current.jpegQuality, it) }
+        }
+        val name = item.name.substringBeforeLast('.', item.name) + "_frame_${positionMs / 1000}s.jpg"
+        // Videos are often in Movies/, which doesn't accept photos: MediaWriter falls back to Pictures/Gallery
+        writer.insertCopy(item.copy(relativePath = item.relativePath.takeUnless { it.startsWith("Movies") }.orEmpty()), file, name, "image/jpeg")
+        com.mephilia.gallery.data.MediaEvents.changed()
+    } finally {
+        file.delete()
+        if (result !== frame) result.recycle()
+        frame.recycle()
     }
 }

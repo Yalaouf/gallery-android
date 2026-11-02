@@ -1,5 +1,6 @@
 package com.mephilia.gallery.ui.components
 
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -92,6 +93,8 @@ fun MediaGrid(
     /** Optional label shown on each thumbnail (e.g. days left in the trash). */
     badge: ((MediaItem) -> String?)? = null,
     header: (LazyGridScope.() -> Unit)? = null,
+    /** Shows the selection circles even when nothing is selected yet (picker screens). */
+    alwaysSelecting: Boolean = false,
 ) {
     val today = stringResource(R.string.today)
     val yesterday = stringResource(R.string.yesterday)
@@ -174,13 +177,15 @@ fun MediaGrid(
         }
     }
 
+    val selectionMode = alwaysSelecting || selected.isNotEmpty()
+    Box(modifier.fillMaxSize()) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = state,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier.fillMaxSize().then(dragModifier),
+        modifier = Modifier.fillMaxSize().then(dragModifier),
     ) {
         header?.invoke(this)
         items(
@@ -192,7 +197,7 @@ fun MediaGrid(
             when (e) {
                 is GridEntry.Header -> DayHeader(
                     label = e.label,
-                    selectionMode = selected.isNotEmpty(),
+                    selectionMode = selectionMode,
                     allSelected = e.ids.all { it in selected },
                     onToggle = { selection?.toggleAll(e.ids) },
                     modifier = snappyItemModifier(),
@@ -200,12 +205,28 @@ fun MediaGrid(
                 is GridEntry.Cell -> MediaThumbnail(
                     item = e.item,
                     modifier = snappyItemModifier(),
-                    selectionMode = selected.isNotEmpty(),
+                    selectionMode = selectionMode,
                     isSelected = e.item.id in selected,
                     badge = badge?.invoke(e.item),
                 ) { onClick(e.item) }
             }
         }
+    }
+    FastScroller(
+        state = state,
+        // Date of each grid index, for the bubble shown while dragging (headers use their day)
+        dateAt = { index ->
+            val i = index - (state.layoutInfo.totalItemsCount - entries.size)
+            when (val e = entries.getOrNull(i.coerceIn(0, entries.lastIndex))) {
+                is GridEntry.Cell -> e.item.dateTaken
+                is GridEntry.Header -> byId[e.ids.firstOrNull()]?.dateTaken
+                null -> null
+            }
+        },
+        showDates = groupByDate,
+        topPadding = 0.dp,
+        bottomPadding = contentPadding.calculateBottomPadding(),
+    )
     }
 }
 
@@ -307,6 +328,16 @@ private fun ThumbnailContent(item: MediaItem, badge: String?) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
+        if (item.favorite) {
+            Icon(
+                Icons.Rounded.Favorite, null,
+                tint = Color.White,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(5.dp)
+                    .size(14.dp),
+            )
+        }
         if (badge != null) {
             Text(
                 badge,

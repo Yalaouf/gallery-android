@@ -64,6 +64,13 @@ class MediaAccess internal constructor(private val context: Context) {
         return ask(MediaStore.createTrashRequest(context.contentResolver, uris, false))
     }
 
+    /** Adds to or removes from favorites (a MediaStore flag shared with other apps). Returns false if declined. */
+    suspend fun setFavorite(uris: List<Uri>, favorite: Boolean): Boolean {
+        val value = if (favorite) 1 else 0
+        if (direct { uris.forEach { update(it, MediaStore.MediaColumns.IS_FAVORITE, value) } }) return true
+        return ask(MediaStore.createFavoriteRequest(context.contentResolver, uris, favorite))
+    }
+
     /** Deletes permanently. Returns false if the user declines. */
     suspend fun delete(uris: List<Uri>): Boolean {
         if (canManageMedia && direct { uris.forEach { context.contentResolver.delete(it, null, null) } }) return true

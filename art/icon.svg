@@ -1,0 +1,17 @@
+<!--
+  Source of the launcher icon (108x108 adaptive-icon grid; launchers show the central 72x72).
+  Family style "Outlined Bauhaus", to reuse for other apps:
+  - background #F3EFE8 (warm paper), ink #1F1D1B
+  - basic shapes (circles, triangles, rounded squares) as ink outlines, 4 units wide, round joins and caps
+  - exactly one solid shape in the app's accent color
+    (gallery #E0603F, music #3F7FD9, files #3A9A6B, calendar #D9A23F)
+  - keep everything inside x/y 32..76
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108">
+  <rect width="108" height="108" fill="#F3EFE8"/>
+  <circle cx="65" cy="42" r="7.5" fill="#E0603F"/>
+  <g fill="none" stroke="#1F1D1B" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 73 L46 54 L60 73 Z"/>
+    <path d="M56 67.6 L65 58 L76 73"/>
+  </g>
+</svg>

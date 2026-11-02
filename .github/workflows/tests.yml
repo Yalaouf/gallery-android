@@ -1,0 +1,60 @@
+# Runs the unit tests on every push and pull request: the run (and the commit's check) fails if a test breaks.
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+    # Version tags are handled by the release workflow, which runs the tests too
+    tags-ignore: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only: this workflow only builds and tests
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the run still going for the previous one
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Same pinned actions as the release workflow
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          packages: platform-tools
+
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+
+      - name: Run the unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      # Lists each failed test and its message on the run's summary page
+      - name: Summarize failures
+        if: failure()
+        run: |
+          {
+            echo "## Failed tests"
+            for f in app/build/test-results/testDebugUnitTest/*.xml; do
+              python3 - "$f" <<'EOF'
+          import sys, xml.etree.ElementTree as ET
+          for case in ET.parse(sys.argv[1]).getroot().iter("testcase"):
+              for problem in list(case.iter("failure")) + list(case.iter("error")):
+                  message = (problem.get("message") or "").splitlines()[0][:300] if problem.get("message") else ""
+                  print(f"- **{case.get('classname').split('.')[-1]}.{case.get('name')}**: {message}")
+          EOF
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

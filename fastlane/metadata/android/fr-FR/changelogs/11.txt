@@ -1,0 +1,2 @@
+Nouveautés de la 1.1.5 :
+• Le numéro de version dans les Paramètres suit la nouvelle numérotation

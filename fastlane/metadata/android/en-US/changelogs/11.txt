@@ -1,0 +1,2 @@
+New in 1.1.5:
+• The version number in Settings now follows the new numbering

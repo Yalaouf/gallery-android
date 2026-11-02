@@ -7,6 +7,12 @@ Versions were renumbered on 2026-11-02 to grow more slowly: 1.0 to 1.5 became 1.
 1.1.0 to 1.1.4. The APKs of those versions still show their old number in Settings; from 1.1.5 on, the number shown
 matches.
 
+## [1.1.5] — 2026-11-02
+
+### Changed
+- The version number in Settings now follows the new numbering (1.1.4 showed "2.1.3"). Nothing else changes from
+  1.1.4.
+
 ## [1.1.4] — 2026-11-02
 
 ### Added
@@ -195,6 +201,7 @@ The 1.1.1 release was published with the version number of 1.1.0 inside the app,
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[1.1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1.0...v1.1.2

@@ -26,8 +26,8 @@ android {
         // Android 11+ for MediaStore.createWriteRequest / createDeleteRequest
         minSdk = 30
         targetSdk = 37
-        versionCode = 10
-        versionName = "1.1.4"
+        versionCode = 11
+        versionName = "1.1.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -3,6 +3,23 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
+## [2.1.3] — 2026-11-02
+
+### Added
+- **Back to the top**: tapping Photos or Albums in the navigation bar while already on that tab scrolls back to the
+  top and expands the title.
+
+### Fixed
+- **Locked folder**: if the index couldn't be written after a file was copied into the locked folder, the copy was
+  left behind while the original stayed in the gallery, so the item showed in both places. The copy is now removed
+  and the original kept.
+- **GIF editor**: mirroring twice left the Save button enabled, as if something had changed.
+
+### Changed
+- The code was reorganized into smaller files, documented throughout, with named constants instead of raw numbers.
+  No change in how the app works, apart from small visual details: the photo editor's mirror button is highlighted
+  while mirrored, empty screens center their text, and the selection bar spaces its buttons evenly.
+
 ## [2.1.2] — 2026-11-02
 
 ### Fixed
@@ -174,6 +191,8 @@ update). 2.1.1 contains the same changes with the right version number.
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[2.1.2]: https://github.com/Yalaouf/gallery-android/compare/v2.1.1...v2.1.2
+[2.1.3]: https://github.com/Yalaouf/gallery-android/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/Yalaouf/gallery-android/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/Yalaouf/gallery-android/compare/v2.0...v2.1.1
 [2.0]: https://github.com/Yalaouf/gallery-android/compare/v1.5...v2.0

@@ -190,4 +190,18 @@ class LockedStoreTest {
         assertTrue(store.load().isEmpty())
         assertTrue(lockedDir.listFiles().orEmpty().none { it.name.endsWith(".jpg") })
     }
+
+    @Test
+    fun failedIndexWriteLeavesNoOrphanCopy() = runBlocking {
+        val store = LockedStore(context)
+        val blocker = File(lockedDir, "index.json.tmp").apply { mkdirs() }
+        try {
+            val result = runCatching { store.add(source("street.jpg", ByteArray(800) { 7 })) }
+            assertTrue(result.isFailure)
+        } finally {
+            blocker.deleteRecursively()
+        }
+        assertTrue(store.load().isEmpty())
+        assertTrue(lockedDir.listFiles().orEmpty().none { it.name.endsWith(".jpg") })
+    }
 }

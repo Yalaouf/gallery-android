@@ -60,7 +60,8 @@ class LockedStore(context: Context) {
 
     /**
      * Copies [item] into the locked folder and returns it as a locked item. The caller then deletes the original;
-     * if that's declined, [discard] removes the copy again.
+     * if that's declined, [discard] removes the copy again. If the copy or the index can't be written, the copy is
+     * removed and the error is thrown, so the caller keeps the original and the item never shows in both places.
      */
     suspend fun add(item: MediaItem): MediaItem = withContext(Dispatchers.IO) {
         lock.withLock {
@@ -71,15 +72,15 @@ class LockedStore(context: Context) {
                 checkNotNull(resolver.openInputStream(item.uri)).use { input ->
                     FileOutputStream(file).use { input.copyToSynced(it) }
                 }
+                val entry = LockedEntry(
+                    id, file.name, item.name, item.mimeType, item.isVideo, item.dateTaken,
+                    item.relativePath, item.width, item.height, item.durationMs,
+                )
+                index.write(entries + entry)
             } catch (e: Exception) {
                 file.delete()
                 throw e
             }
-            val entry = LockedEntry(
-                id, file.name, item.name, item.mimeType, item.isVideo, item.dateTaken,
-                item.relativePath, item.width, item.height, item.durationMs,
-            )
-            index.write(entries + entry)
             item.copy(id = id, uri = Uri.fromFile(file), locked = true, bucketId = LOCKED_ID)
         }
     }

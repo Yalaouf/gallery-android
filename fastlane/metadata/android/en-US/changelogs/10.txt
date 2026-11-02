@@ -1,0 +1,4 @@
+New in 2.1.3:
+• Tap Photos or Albums again to go back to the top
+• Locked folder: a failed hide no longer leaves the photo in both places
+• GIF editor: mirroring twice no longer counts as an edit

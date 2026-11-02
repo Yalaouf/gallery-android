@@ -28,12 +28,17 @@ class AccessDeniedException : CancellationException("Access denied")
  * Android's confirmation dialog.
  */
 class MediaAccess internal constructor(private val context: Context) {
+    /** Shows one of Android's confirmation dialogs; set by [rememberMediaAccess]. */
     internal var launch: (IntentSenderRequest) -> Unit = {}
+
+    /** Receives the user's answer to the dialog being shown, if any. */
     internal var pending: ((Boolean) -> Unit)? = null
 
+    /** Whether the user gave the media management permission (Android 12+), which allows acting without asking. */
     val canManageMedia: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && MediaStore.canManageMedia(context)
 
+    /** Shows Android's confirmation dialog for [pi] and returns whether the user accepted. */
     private suspend fun ask(pi: PendingIntent): Boolean = suspendCancellableCoroutine { cont ->
         pending = { granted -> if (cont.isActive) cont.resume(granted) }
         launch(IntentSenderRequest.Builder(pi.intentSender).build())
@@ -52,7 +57,7 @@ class MediaAccess internal constructor(private val context: Context) {
         block()
     }
 
-    /** Returns false if the user declines. */
+    /** Moves items to the trash. Returns false if the user declines. */
     suspend fun trash(uris: List<Uri>): Boolean {
         if (canManageMedia && direct { uris.forEach { update(it, MediaStore.MediaColumns.IS_TRASHED, 1) } }) return true
         return ask(MediaStore.createTrashRequest(context.contentResolver, uris, true))
@@ -77,6 +82,7 @@ class MediaAccess internal constructor(private val context: Context) {
         return ask(MediaStore.createDeleteRequest(context.contentResolver, uris))
     }
 
+    /** Runs [block] on the IO dispatcher; returns false if it lacked the permission. */
     private suspend fun direct(block: () -> Unit): Boolean = withContext(Dispatchers.IO) {
         try {
             block()
@@ -86,11 +92,13 @@ class MediaAccess internal constructor(private val context: Context) {
         }
     }
 
+    /** Sets [column] of the file at [uri] to [value]. */
     private fun update(uri: Uri, column: String, value: Int) {
         context.contentResolver.update(uri, ContentValues().apply { put(column, value) }, null, null)
     }
 }
 
+/** Remembers a [MediaAccess] wired to this screen, which shows Android's confirmation dialogs. */
 @Composable
 fun rememberMediaAccess(): MediaAccess {
     val context = LocalContext.current

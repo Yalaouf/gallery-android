@@ -15,15 +15,20 @@ class LatestLoader<T>(
     private val load: suspend () -> T,
     private val apply: (T) -> Unit,
 ) {
+    /** The load in progress, if any. */
     private var job: Job? = null
 
+    /** Whether a load is in progress. */
     val isLoading: Boolean get() = job?.isActive == true
 
+    /**
+     * Starts a load, cancelling the one in progress. If this load is cancelled in turn (a newer request, or
+     * [cancel]) while it runs, its result is dropped.
+     */
     fun reload() {
         job?.cancel()
         job = scope.launch {
             val result = load()
-            // Cancelled while loading (newer request, or [cancel]): drop the result
             coroutineContext.ensureActive()
             apply(result)
         }
@@ -34,6 +39,7 @@ class LatestLoader<T>(
         if (isLoading) reload()
     }
 
+    /** Cancels the load in progress, if any; its result won't be applied. */
     fun cancel() {
         job?.cancel()
         job = null

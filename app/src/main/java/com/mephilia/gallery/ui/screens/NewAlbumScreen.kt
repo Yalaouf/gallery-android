@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -33,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -48,18 +45,25 @@ import com.mephilia.gallery.data.MediaWriter
 import com.mephilia.gallery.ui.GalleryViewModel
 import com.mephilia.gallery.ui.components.AccessDeniedException
 import com.mephilia.gallery.ui.components.MediaGrid
+import com.mephilia.gallery.ui.components.ThemedSystemBars
+import com.mephilia.gallery.ui.components.newFolderPath
 import com.mephilia.gallery.ui.components.rememberMediaAccess
 import com.mephilia.gallery.ui.components.rememberSelection
+import com.mephilia.gallery.ui.theme.Spacing
 import kotlinx.coroutines.launch
+
+/** Tonal elevation of the bottom bar with the move and copy buttons. */
+private val BOTTOM_BAR_ELEVATION = 3.dp
 
 /**
  * Creates an album: Android only lists folders that contain photos or videos, so the album is created
- * by moving or copying the chosen items into Pictures/[name].
+ * by moving or copying the chosen items into Pictures/[name]. This screen is only for picking: every tap
+ * selects or deselects an item.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewAlbumScreen(vm: GalleryViewModel, name: String, onClose: () -> Unit) {
-    SystemBars(lightIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f)
+    ThemedSystemBars()
     val context = LocalContext.current
     val media by vm.media.collectAsStateWithLifecycle()
     val sort by vm.mediaSort.collectAsStateWithLifecycle()
@@ -69,7 +73,7 @@ fun NewAlbumScreen(vm: GalleryViewModel, name: String, onClose: () -> Unit) {
     val writer = remember { MediaWriter(context) }
     val scope = rememberCoroutineScope()
     var working by remember { mutableStateOf(false) }
-    val path = "Pictures/$name/"
+    val path = newFolderPath(name)
 
     fun finish(copy: Boolean) {
         val chosen = selection.items(media)
@@ -82,10 +86,9 @@ fun NewAlbumScreen(vm: GalleryViewModel, name: String, onClose: () -> Unit) {
                     writer.lastMoveFailures
                 }
                 val done = chosen.size - failed
-                val res = context.resources
-                val msg = res.getQuantityString(if (copy) R.plurals.copied_to else R.plurals.moved_to, done, done, name)
+                val message = context.resources.getQuantityString(if (copy) R.plurals.copied_to else R.plurals.moved_to, done, done, name)
                 MediaEvents.changed()
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 onClose()
             } catch (_: AccessDeniedException) {
                 working = false
@@ -114,10 +117,10 @@ fun NewAlbumScreen(vm: GalleryViewModel, name: String, onClose: () -> Unit) {
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 3.dp) {
+            Surface(tonalElevation = BOTTOM_BAR_ELEVATION) {
                 Row(
-                    Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = Spacing.l, vertical = Spacing.m),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.m),
                 ) {
                     OutlinedButton(
                         onClick = { finish(copy = true) },
@@ -139,8 +142,7 @@ fun NewAlbumScreen(vm: GalleryViewModel, name: String, onClose: () -> Unit) {
                 columns = columns,
                 groupByDate = sort == MediaSort.DateDesc || sort == MediaSort.DateAsc,
                 state = rememberLazyGridState(),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                // Every tap selects: this screen is only for picking
+                contentPadding = PaddingValues(bottom = Spacing.l),
                 onClick = { selection.toggle(it) },
                 selection = selection,
                 alwaysSelecting = true,

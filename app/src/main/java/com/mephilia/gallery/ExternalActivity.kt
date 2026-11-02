@@ -1,6 +1,6 @@
 package com.mephilia.gallery
 
-import androidx.core.content.IntentCompat
+import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mephilia.gallery.data.MediaItem
 import com.mephilia.gallery.data.MediaRepository
@@ -28,15 +29,17 @@ import com.mephilia.gallery.ui.editRouteFor
 import com.mephilia.gallery.ui.editor.GifEditorScreen
 import com.mephilia.gallery.ui.editor.PhotoEditorScreen
 import com.mephilia.gallery.ui.editor.VideoEditorScreen
-import com.mephilia.gallery.ui.screens.ViewerScreen
+import com.mephilia.gallery.ui.screens.viewer.ViewerScreen
 import com.mephilia.gallery.ui.theme.GalleryTheme
-import android.content.ContentResolver
 
 /**
  * Entry point for other apps: "Edit with" (ACTION_EDIT), "Open with" (ACTION_VIEW), and
  * "Edit with Gallery" in the share menu (ACTION_SEND). Sharing is the only way in from a
  * screenshot, whose Edit button always launches the system editor.
  * Closing the editor returns to the calling app.
+ *
+ * Only content URIs are accepted, which is what apps share: a file URI could point into this app's private
+ * storage, and saving or sharing it would leak those files.
  */
 class ExternalActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,8 +48,6 @@ class ExternalActivity : ComponentActivity() {
         requestHighestRefreshRate()
         val shared = intent.action == Intent.ACTION_SEND
         val uri = if (shared) IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java) else intent.data
-        // Only content:// URIs, which is what apps share. A file:// URI could point into this app's
-        // private storage, and saving or sharing it would leak those files.
         if (uri == null || uri.scheme != ContentResolver.SCHEME_CONTENT) {
             finish()
             return
@@ -61,6 +62,12 @@ class ExternalActivity : ComponentActivity() {
     }
 }
 
+/**
+ * The file at [uri], in the editor if [editMode], otherwise in the viewer (whose edit button opens the editor).
+ * Closes the activity ([onFinish]) if the file can't be read, or when the editor opened directly is closed.
+ *
+ * @param type the MIME type given by the calling app, if any.
+ */
 @Composable
 private fun ExternalRoot(uri: Uri, type: String?, editMode: Boolean, onFinish: () -> Unit) {
     val context = LocalContext.current

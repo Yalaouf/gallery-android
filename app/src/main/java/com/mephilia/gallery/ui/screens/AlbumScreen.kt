@@ -1,7 +1,5 @@
 package com.mephilia.gallery.ui.screens
 
-import com.mephilia.gallery.data.FAVORITES_ID
-import com.mephilia.gallery.data.ON_THIS_DAY_ID
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,24 +36,36 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mephilia.gallery.R
+import com.mephilia.gallery.data.FAVORITES_ID
 import com.mephilia.gallery.data.MediaItem
 import com.mephilia.gallery.data.MediaSort
+import com.mephilia.gallery.data.ON_THIS_DAY_ID
 import com.mephilia.gallery.ui.GalleryViewModel
+import com.mephilia.gallery.ui.components.EmptyState
 import com.mephilia.gallery.ui.components.MediaGrid
 import com.mephilia.gallery.ui.components.MediaOptionsSheet
 import com.mephilia.gallery.ui.components.SelectionActionsBar
 import com.mephilia.gallery.ui.components.SelectionTopBar
+import com.mephilia.gallery.ui.components.ThemedSystemBars
 import com.mephilia.gallery.ui.components.rememberSelection
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.pluralStringResource
-import com.mephilia.gallery.R
+import com.mephilia.gallery.ui.theme.Dimens
 
+/**
+ * A folder, or a pseudo album (favorites, on this day, all photos, all videos), with selection mode.
+ *
+ * Folders follow the chosen sort and filter, which can be changed here. Favorites and on this day keep their own
+ * order (newest first), so they offer no sort options and are always grouped by day.
+ *
+ * @param bucketId the folder's id, or a pseudo album's (such as [FAVORITES_ID]).
+ * @param name the title shown.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumScreen(
@@ -75,7 +85,8 @@ fun AlbumScreen(
     var showOptions by rememberSaveable { mutableStateOf(false) }
     val scroll = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val gridState = rememberLazyGridState()
-    SystemBars(lightIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f)
+    val ownOrder = bucketId == FAVORITES_ID || bucketId == ON_THIS_DAY_ID
+    ThemedSystemBars()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
@@ -101,8 +112,7 @@ fun AlbumScreen(
                     IconButton(onClick = { selection.selectAll(items) }, enabled = items.isNotEmpty()) {
                         Icon(Icons.Rounded.Checklist, stringResource(R.string.action_select_all))
                     }
-                    // Pseudo albums have their own order (favorites by date)
-                    if (bucketId != FAVORITES_ID && bucketId != ON_THIS_DAY_ID) {
+                    if (!ownOrder) {
                         IconButton(onClick = { showOptions = true }) { Icon(Icons.Rounded.Tune, stringResource(R.string.action_sort_filter)) }
                     }
                 },
@@ -117,10 +127,10 @@ fun AlbumScreen(
                 MediaGrid(
                     items = items,
                     columns = columns,
-                    groupByDate = bucketId == FAVORITES_ID || bucketId == ON_THIS_DAY_ID || sort == MediaSort.DateDesc || sort == MediaSort.DateAsc,
+                    groupByDate = ownOrder || sort == MediaSort.DateDesc || sort == MediaSort.DateAsc,
                     state = gridState,
                     contentPadding = PaddingValues(
-                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 88.dp,
+                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + Dimens.actionsBarClearance,
                     ),
                     onClick = { if (selection.active) selection.toggle(it) else onOpenMedia(it) },
                     selection = selection,
@@ -137,7 +147,7 @@ fun AlbumScreen(
                     albums = albums,
                     onDone = selection::clear,
                     onSelectAll = { selection.selectAll(items) },
-                    modifier = Modifier.navigationBarsPadding().padding(bottom = 16.dp),
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = Dimens.floatingBarBottomMargin),
                 )
             }
         }

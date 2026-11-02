@@ -14,7 +14,10 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 
-/** Falls back to another decoder if the hardware one fails to initialize. */
+/**
+ * A player for the video at [uri], ready to play, [muted] or not. It falls back to another decoder if the
+ * hardware one fails to initialize.
+ */
 @OptIn(UnstableApi::class)
 fun createPlayer(context: Context, uri: Uri, muted: Boolean): ExoPlayer =
     ExoPlayer.Builder(context, DefaultRenderersFactory(context).setEnableDecoderFallback(true))
@@ -30,6 +33,7 @@ fun createPlayer(context: Context, uri: Uri, muted: Boolean): ExoPlayer =
  * (e.g. YouTube in split screen) keep playing. Unmuted, focus is requested and other apps pause.
  */
 fun ExoPlayer.setMuted(muted: Boolean) {
+    val handleAudioFocus = !muted
     trackSelectionParameters = trackSelectionParameters.buildUpon()
         .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, muted)
         .build()
@@ -38,11 +42,14 @@ fun ExoPlayer.setMuted(muted: Boolean) {
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
             .build(),
-        /* handleAudioFocus = */ !muted,
+        handleAudioFocus,
     )
 }
 
-/** True in split screen or a floating window. Re-evaluated on every configuration change. */
+/**
+ * True in split screen or a floating window. Reading the configuration makes it re-evaluated on every
+ * configuration change.
+ */
 @Composable
 fun isInMultiWindow(): Boolean {
     LocalConfiguration.current

@@ -1,5 +1,6 @@
 package com.mephilia.gallery.ui.components
 
+import com.mephilia.gallery.ui.theme.Spacing
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,13 +22,19 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.mephilia.gallery.data.AlbumSort
 import com.mephilia.gallery.data.MediaFilter
 import com.mephilia.gallery.data.MediaSort
 import androidx.compose.ui.res.stringResource
 import com.mephilia.gallery.R
 
+/** The grid column counts offered. */
+private val COLUMN_CHOICES = 2..6
+
+/**
+ * Options of the photos: sort order, photos and/or videos, and the number of columns.
+ * Picking "Random" again shuffles anew.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MediaOptionsSheet(
@@ -40,9 +47,9 @@ fun MediaOptionsSheet(
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding()) {
+        Column(Modifier.padding(horizontal = Spacing.xl).navigationBarsPadding()) {
             SectionTitle(stringResource(R.string.sheet_sort_by))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 MediaSort.entries.forEach { s ->
                     FilterChip(
                         selected = s == sort,
@@ -57,22 +64,26 @@ fun MediaOptionsSheet(
                 }
             }
             SectionTitle(stringResource(R.string.sheet_show))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 MediaFilter.entries.forEach { f ->
                     FilterChip(selected = f == filter, onClick = { onFilter(f) }, label = { Text(stringResource(f.label)) })
                 }
             }
             SectionTitle(stringResource(R.string.sheet_columns))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                (2..6).forEach { n ->
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
+                COLUMN_CHOICES.forEach { n ->
                     FilterChip(selected = n == columns, onClick = { onColumns(n) }, label = { Text("$n") })
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }
 
+/**
+ * Sort options of the albums. Picking the current sort again reverses the order, shown by the arrow
+ * on the selected chip.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AlbumOptionsSheet(
@@ -82,15 +93,15 @@ fun AlbumOptionsSheet(
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(horizontal = 24.dp).navigationBarsPadding()) {
+        Column(Modifier.padding(horizontal = Spacing.xl).navigationBarsPadding()) {
             SectionTitle(stringResource(R.string.sheet_sort_albums_by))
             Text(
                 stringResource(R.string.sheet_sort_albums_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(Spacing.s))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                 AlbumSort.entries.forEach { s ->
                     val selected = s == sort
                     FilterChip(
@@ -103,17 +114,18 @@ fun AlbumOptionsSheet(
                     )
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Spacing.xl))
         }
     }
 }
 
+/** The title of a section of the options, in the accent color. */
 @Composable
 private fun SectionTitle(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+        modifier = Modifier.padding(top = Spacing.l, bottom = Spacing.s),
     )
 }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,8 +28,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -43,16 +42,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.mephilia.gallery.ui.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/** The scroller only shows on lists at least this many screens long. */
+private const val MIN_SCREENS = 4
+
+/** How long the handle stays after scrolling stops. */
+private const val HIDE_DELAY_MS = 1500L
+
+/** Height of the handle. */
+private val HANDLE_HEIGHT = 52.dp
+
+/** Width of the handle's touch area, much wider than what's drawn. */
+private val HANDLE_TOUCH_WIDTH = 28.dp
+
+/** Drawn width of the handle. */
+private val HANDLE_WIDTH = 6.dp
+
+/** Drawn width of the handle while dragged. */
+private val HANDLE_DRAGGED_WIDTH = 8.dp
+
+/** Opacity of the handle when not dragged. */
+private const val HANDLE_ALPHA = 0.6f
+
+/** Corner radius of the date bubble. */
+private val BUBBLE_CORNER = 16.dp
+
+/** Shadow under the date bubble. */
+private val BUBBLE_ELEVATION = 4.dp
+
+/** Horizontal padding inside the date bubble. */
+private val BUBBLE_HORIZONTAL_PADDING = 14.dp
+
+/** Date pattern skeleton of the bubble: month and year. */
+private const val MONTH_SKELETON = "MMMMyyyy"
 
 /**
- * Scrollbar handle on the right edge for long grids. It appears while scrolling; dragging it jumps through
- * the list and shows the month and year of the items under it.
+ * A scrollbar handle on the right edge of long grids. It appears while scrolling and fades out shortly after;
+ * dragging it jumps through the list and, with [showDates], shows the month and year of the items under it.
+ * It only shows on lists several screens long.
+ *
+ * @param dateAt the date of the grid entry at an index, for the bubble.
+ * @param topPadding space kept free above the handle's track.
+ * @param bottomPadding space kept free under the handle's track.
  */
 @Composable
 fun FastScroller(
@@ -64,8 +102,7 @@ fun FastScroller(
 ) {
     val total by remember { derivedStateOf { state.layoutInfo.totalItemsCount } }
     val visible by remember { derivedStateOf { state.layoutInfo.visibleItemsInfo.size } }
-    // Only worth it when the list is several screens long
-    if (visible == 0 || total < visible * 4) return
+    if (visible == 0 || total < visible * MIN_SCREENS) return
 
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
@@ -75,9 +112,10 @@ fun FastScroller(
     var shown by remember { mutableStateOf(false) }
     val scrolling = state.isScrollInProgress
     LaunchedEffect(scrolling, dragging) {
-        if (scrolling || dragging) shown = true
-        else {
-            delay(1500)
+        if (scrolling || dragging) {
+            shown = true
+        } else {
+            delay(HIDE_DELAY_MS)
             shown = false
         }
     }
@@ -90,17 +128,9 @@ fun FastScroller(
     }
     val fraction = if (dragging) dragFraction else scrolled
 
-    val locale = LocalConfiguration.current.locales[0]
-    val monthFormat = remember(locale) {
-        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "MMMMyyyy"), locale)
-    }
-
-    BoxWithConstraints(Modifier.fillMaxSize().padding(top = topPadding + 8.dp, bottom = bottomPadding + 8.dp)) {
-        val handleHeight = 52.dp
-        val track = with(density) { (maxHeight - handleHeight).toPx() }.coerceAtLeast(1f)
-        val y = (fraction * track).roundToInt()
+    BoxWithConstraints(Modifier.fillMaxSize().padding(top = topPadding + Spacing.s, bottom = bottomPadding + Spacing.s)) {
+        val track = with(density) { (maxHeight - HANDLE_HEIGHT).toPx() }.coerceAtLeast(1f)
         val range = (total - visible).coerceAtLeast(1)
-        // Read from the gesture without restarting it when they change mid-drag
         val currentTrack by rememberUpdatedState(track)
         val currentRange by rememberUpdatedState(range)
         val isShown by rememberUpdatedState(shown)
@@ -108,33 +138,16 @@ fun FastScroller(
         Row(
             Modifier
                 .align(Alignment.TopEnd)
-                .offset { IntOffset(0, y) }
+                .offset { IntOffset(0, (fraction * track).roundToInt()) }
                 .graphicsLayer { this.alpha = alpha },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AnimatedVisibility(dragging && showDates, enter = fadeIn(), exit = fadeOut()) {
-                val millis = dateAt((fraction * range).roundToInt())
-                if (millis != null) {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shadowElevation = 4.dp,
-                        modifier = Modifier.padding(end = 8.dp),
-                    ) {
-                        Text(
-                            Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(monthFormat)
-                                .replaceFirstChar { it.titlecase(locale) },
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                        )
-                    }
-                }
+                dateAt((fraction * range).roundToInt())?.let { DateBubble(it) }
             }
-            // Wide touch area, thin visible handle
             Box(
                 Modifier
-                    .size(width = 28.dp, height = handleHeight)
+                    .size(width = HANDLE_TOUCH_WIDTH, height = HANDLE_HEIGHT)
                     .pointerInput(Unit) {
                         var start = 0f
                         var moved = 0f
@@ -162,14 +175,37 @@ fun FastScroller(
             ) {
                 Box(
                     Modifier
-                        .padding(end = 4.dp)
-                        .size(width = if (dragging) 8.dp else 6.dp, height = handleHeight)
+                        .padding(end = Spacing.xs)
+                        .size(width = if (dragging) HANDLE_DRAGGED_WIDTH else HANDLE_WIDTH, height = HANDLE_HEIGHT)
                         .background(
-                            if (dragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            if (dragging) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = HANDLE_ALPHA),
                             CircleShape,
                         ),
                 )
             }
         }
+    }
+}
+
+/** The bubble next to the dragged handle, with the month and year of [millis]. */
+@Composable
+private fun DateBubble(millis: Long) {
+    val locale = LocalConfiguration.current.locales[0]
+    val monthFormat = remember(locale) {
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, MONTH_SKELETON), locale)
+    }
+    Surface(
+        shape = RoundedCornerShape(BUBBLE_CORNER),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shadowElevation = BUBBLE_ELEVATION,
+        modifier = Modifier.padding(end = Spacing.s),
+    ) {
+        Text(
+            Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(monthFormat).replaceFirstChar { it.titlecase(locale) },
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = BUBBLE_HORIZONTAL_PADDING, vertical = Spacing.s),
+        )
     }
 }

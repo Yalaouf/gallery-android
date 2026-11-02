@@ -1,122 +1,115 @@
 package com.mephilia.gallery.data
 
-import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
-import android.provider.MediaStore
-import android.webkit.MimeTypeMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+
+/** Name of the locked folder in the app's private storage. */
+private const val LOCKED_DIR = "locked"
+
+/** Id slots per millisecond, so items locked in the same millisecond still get different ids. */
+private const val ID_SLOTS_PER_MILLI = 1000
+
+/** Keeps locked ids clear of the small negative numbers. */
+private const val ID_OFFSET = 10
+
+/** Longest extension kept from the original name; longer ones are probably not extensions. */
+private const val MAX_EXTENSION_LENGTH = 5
+
+/** Extension of a locked video whose name has none. */
+private const val DEFAULT_VIDEO_EXTENSION = "mp4"
+
+/** Extension of a locked photo whose name has none. */
+private const val DEFAULT_PHOTO_EXTENSION = "jpg"
 
 /**
- * The locked folder: files moved into the app's private storage, where other apps (and Android's media
- * index) can't see them. An index file keeps what's needed to show them and to put them back where they were.
+ * The locked folder: files moved into the app's private storage, where other apps (and Android's media index)
+ * can't see them. Its [LockedIndex] keeps what's needed to show them and to put them back where they were.
  *
- * Private storage is removed when the app is uninstalled, and it's excluded from cloud backups.
+ * Locked items have negative ids, so they never collide with MediaStore ids. Private storage is removed when
+ * the app is uninstalled, and it's excluded from cloud backups.
  */
 class LockedStore(context: Context) {
+    /** Reads the originals and writes the restored files. */
     private val resolver = context.contentResolver
-    private val dir = File(context.filesDir, "locked").apply { mkdirs() }
-    private val indexFile = File(dir, "index.json")
-    /** The index as it was before the last change, used if the current one is damaged. */
-    private val backupFile = File(dir, "index.json.bak")
 
-    private data class Entry(
-        val id: Long,
-        val file: String,
-        val name: String,
-        val mime: String,
-        val isVideo: Boolean,
-        val dateTaken: Long,
-        val relativePath: String,
-        val width: Int,
-        val height: Int,
-        val durationMs: Long,
-    )
+    /** The locked folder in private storage. */
+    private val dir = File(context.filesDir, LOCKED_DIR).apply { mkdirs() }
 
+    /** What the locked folder holds. */
+    private val index = LockedIndex(dir)
+
+    /** The hidden items, newest first. */
     suspend fun load(): List<MediaItem> = withContext(Dispatchers.IO) {
-        lock.withLock { readIndex() }.mapNotNull { e ->
-            val f = File(dir, e.file)
-            if (!f.exists()) return@mapNotNull null
+        lock.withLock { index.read() }.mapNotNull { entry ->
+            val file = File(dir, entry.file)
+            if (!file.exists()) return@mapNotNull null
             MediaItem(
-                id = e.id, uri = Uri.fromFile(f), isVideo = e.isVideo, name = e.name, mimeType = e.mime,
-                dateTaken = e.dateTaken, dateModified = f.lastModified(), size = f.length(),
-                width = e.width, height = e.height, durationMs = e.durationMs,
-                bucketId = LOCKED_ID, bucketName = "", relativePath = e.relativePath, locked = true,
+                id = entry.id, uri = Uri.fromFile(file), isVideo = entry.isVideo, name = entry.name, mimeType = entry.mime,
+                dateTaken = entry.dateTaken, dateModified = file.lastModified(), size = file.length(),
+                width = entry.width, height = entry.height, durationMs = entry.durationMs,
+                bucketId = LOCKED_ID, bucketName = "", relativePath = entry.relativePath, locked = true,
             )
         }.sortedByDescending { it.dateTaken }
     }
 
     /**
-     * Copies [item] into the locked folder. The caller then deletes the original;
+     * Copies [item] into the locked folder and returns it as a locked item. The caller then deletes the original;
      * if that's declined, [discard] removes the copy again.
      */
     suspend fun add(item: MediaItem): MediaItem = withContext(Dispatchers.IO) {
         lock.withLock {
-            val entries = readIndex()
-            val id = -(System.currentTimeMillis() * 1000 + entries.size % 1000) - 10
-            val ext = item.name.substringAfterLast('.', "").takeIf { it.length in 1..5 } ?: if (item.isVideo) "mp4" else "jpg"
-            val file = File(dir, "${-id}.$ext")
+            val entries = index.read()
+            val id = -(System.currentTimeMillis() * ID_SLOTS_PER_MILLI + entries.size % ID_SLOTS_PER_MILLI) - ID_OFFSET
+            val file = File(dir, "${-id}.${extensionOf(item)}")
             try {
-                resolver.openInputStream(item.uri)!!.use { input ->
-                    FileOutputStream(file).use { out ->
-                        input.copyTo(out)
-                        out.flush()
-                        out.fd.sync()
-                    }
+                checkNotNull(resolver.openInputStream(item.uri)).use { input ->
+                    FileOutputStream(file).use { input.copyToSynced(it) }
                 }
             } catch (e: Exception) {
                 file.delete()
                 throw e
             }
-            val entry = Entry(
+            val entry = LockedEntry(
                 id, file.name, item.name, item.mimeType, item.isVideo, item.dateTaken,
                 item.relativePath, item.width, item.height, item.durationMs,
             )
-            writeIndex(entries + entry)
+            index.write(entries + entry)
             item.copy(id = id, uri = Uri.fromFile(file), locked = true, bucketId = LOCKED_ID)
         }
     }
 
+    /** Deletes the locked items with [ids] for good. */
     suspend fun discard(ids: Collection<Long>) = withContext(Dispatchers.IO) {
         lock.withLock {
-            val entries = readIndex()
-            val (gone, kept) = entries.partition { it.id in ids }
+            val (gone, kept) = index.read().partition { it.id in ids }
             gone.forEach { File(dir, it.file).delete() }
-            writeIndex(kept)
+            index.write(kept)
         }
     }
 
-    /** Puts items back in the gallery, in their original folder when possible. Returns how many failed. */
+    /**
+     * Puts [items] back in the gallery, in their original folder with their original date when possible
+     * (so they go back to their place in the timeline), otherwise in the app's folder. Returns how many failed.
+     */
     suspend fun restore(items: List<MediaItem>): Int = withContext(Dispatchers.IO) {
         var failed = 0
         val restored = ArrayList<Long>()
         for (item in items) {
             val file = File(item.uri.path ?: continue)
-            val fallback = if (item.isVideo) "Movies/Gallery/" else "Pictures/Gallery/"
-            val uri = insert(item, item.relativePath, true) ?: insert(item, item.relativePath, false)
-                ?: insert(item, fallback, false)
+            val uri = insertRestored(item)
             if (uri == null) {
                 failed++
                 continue
             }
             try {
-                resolver.openFileDescriptor(uri, "w")!!.use { pfd ->
-                    FileOutputStream(pfd.fileDescriptor).use { out ->
-                        file.inputStream().use { it.copyTo(out) }
-                        out.flush()
-                        out.fd.sync()
-                    }
-                }
-                resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                file.inputStream().use { resolver.writeSynced(uri, MODE_WRITE, it) }
+                resolver.publish(uri)
                 restored += item.id
             } catch (_: Exception) {
                 resolver.delete(uri, null, null)
@@ -127,88 +120,25 @@ class LockedStore(context: Context) {
         failed
     }
 
-    private fun insert(item: MediaItem, relativePath: String, withDate: Boolean): Uri? = try {
-        val collection = if (item.isVideo) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        else MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        resolver.insert(collection, ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, item.name)
-            put(MediaStore.MediaColumns.MIME_TYPE, item.mimeType)
-            if (relativePath.isNotBlank()) put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-            // Keeps the original date, so the item goes back to its place in the timeline
-            if (withDate) put(MediaStore.MediaColumns.DATE_TAKEN, item.dateTaken)
-            put(MediaStore.MediaColumns.IS_PENDING, 1)
-        })
-    } catch (_: Exception) {
-        null
-    }
-
     /**
-     * The index, plus any locked file it doesn't mention (damaged or lost index): those are recovered with
-     * what the file itself tells (name, type, date), so a hidden photo can never become unreachable.
+     * A new pending gallery file for [item]: in its original folder with its date, then without the date,
+     * then in the app's folder; null if all of these are refused.
      */
-    private fun readIndex(): List<Entry> {
-        // The backup is one change behind: it may list files deleted since, which are dropped here
-        val indexed = (parse(indexFile) ?: parse(backupFile).orEmpty()).filter { File(dir, it.file).exists() }
-        val known = indexed.mapTo(HashSet()) { it.file }
-        val orphans = dir.listFiles().orEmpty().filter {
-            it.isFile && it.name !in known && !it.name.startsWith("index.json")
-        }.mapNotNull { f ->
-            val id = f.name.substringBefore('.').toLongOrNull()?.let { -it } ?: return@mapNotNull null
-            val ext = f.name.substringAfterLast('.', "").lowercase()
-            val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
-            Entry(
-                id, f.name, f.name, mime, mime.startsWith("video/"), f.lastModified(),
-                relativePath = "", width = 0, height = 0, durationMs = 0,
-            )
-        }
-        return indexed + orphans
+    private fun insertRestored(item: MediaItem): Uri? {
+        val collection = mediaCollection(item.isVideo)
+        fun insert(folder: String, dateTaken: Long?) = resolver.insertPending(collection, item.name, item.mimeType, folder, dateTaken)
+        return insert(item.relativePath, item.dateTaken)
+            ?: insert(item.relativePath, null)
+            ?: insert(StorageFolders.appFolder(item.isVideo), null)
     }
 
-    /** The entries of an index file, or null if it's missing or unreadable. */
-    private fun parse(file: File): List<Entry>? {
-        if (!file.exists()) return null
-        return runCatching {
-            val arr = JSONArray(file.readText())
-            (0 until arr.length()).map { i ->
-                val o = arr.getJSONObject(i)
-                Entry(
-                    o.getLong("id"), o.getString("file"), o.getString("name"), o.getString("mime"),
-                    o.getBoolean("video"), o.getLong("taken"), o.optString("path"),
-                    o.optInt("w"), o.optInt("h"), o.optLong("duration"),
-                )
-            }
-        }.getOrNull()
-    }
+    /** The extension of the locked copy of [item]: its own, or a default one by type. */
+    private fun extensionOf(item: MediaItem): String =
+        item.name.substringAfterLast('.', "").takeIf { it.length in 1..MAX_EXTENSION_LENGTH }
+            ?: if (item.isVideo) DEFAULT_VIDEO_EXTENSION else DEFAULT_PHOTO_EXTENSION
 
-    private fun writeIndex(entries: List<Entry>) {
-        val arr = JSONArray()
-        entries.forEach { e ->
-            arr.put(JSONObject().apply {
-                put("id", e.id); put("file", e.file); put("name", e.name); put("mime", e.mime)
-                put("video", e.isVideo); put("taken", e.dateTaken); put("path", e.relativePath)
-                put("w", e.width); put("h", e.height); put("duration", e.durationMs)
-            })
-        }
-        // Keep the current index as the backup, unless it's damaged (the backup is then the better copy)
-        if (parse(indexFile) != null) indexFile.copyTo(backupFile, overwrite = true)
-        // Write then replace in one step, so a crash can't leave a half-written index
-        val tmp = File(dir, "index.json.tmp")
-        FileOutputStream(tmp).use { out ->
-            out.write(arr.toString().toByteArray())
-            out.fd.sync()
-        }
-        // Throws if it fails, rather than silently keeping the old index
-        Files.move(tmp.toPath(), indexFile.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-    }
-
-    companion object {
-        private val lock = Mutex()
+    private companion object {
+        /** Serializes changes to the index, across every instance. */
+        val lock = Mutex()
     }
 }
-
-/** Pseudo album ids for collections that aren't folders. */
-const val LOCKED_ID = Long.MIN_VALUE
-const val FAVORITES_ID = Long.MIN_VALUE + 1
-const val ON_THIS_DAY_ID = Long.MIN_VALUE + 2
-const val PHOTOS_ID = Long.MIN_VALUE + 3
-const val VIDEOS_ID = Long.MIN_VALUE + 4

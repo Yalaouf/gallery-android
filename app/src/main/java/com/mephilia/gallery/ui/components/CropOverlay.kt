@@ -12,51 +12,50 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
-/** Normalized (0..1) crop covering the whole content. */
-val FullCrop = Rect(0f, 0f, 1f, 1f)
+/** How close to a corner or edge a touch must start to grab it. */
+private val TOUCH_RADIUS = 28.dp
 
-data class AspectPreset(val label: String, val ratio: Float?)
+/** Smallest crop side, so the crop stays easy to grab. */
+private val MIN_CROP_SIZE = 48.dp
 
-fun aspectPresets(originalRatio: Float, freeLabel: String, originalLabel: String) = listOf(
-    AspectPreset(freeLabel, null),
-    AspectPreset(originalLabel, originalRatio),
-    AspectPreset("1:1", 1f),
-    AspectPreset("4:5", 4f / 5f),
-    AspectPreset("3:4", 3f / 4f),
-    AspectPreset("4:3", 4f / 3f),
-    AspectPreset("9:16", 9f / 16f),
-    AspectPreset("16:9", 16f / 9f),
-)
+/** Opacity of the veil over the parts cropped away. */
+private const val VEIL_ALPHA = 0.55f
 
-/** Rotates a normalized crop along with the image by [quarterTurns] (positive = clockwise). */
-fun Rect.rotatedBy(quarterTurns: Int): Rect {
-    var r = this
-    repeat(quarterTurns.mod(4)) {
-        // Clockwise: point (x, y) becomes (1 - y, x)
-        r = Rect(1f - r.bottom, r.left, 1f - r.top, r.right)
-    }
-    return r
-}
+/** Opacity of the rule-of-thirds grid lines. */
+private const val GRID_ALPHA = 0.35f
 
-/** Largest centered crop with pixel aspect [ratio] inside content of aspect [contentRatio]. */
-fun centeredCrop(ratio: Float?, contentRatio: Float): Rect {
-    if (ratio == null) return FullCrop
-    val k = ratio / contentRatio
-    val (w, h) = if (k >= 1f) 1f to 1f / k else k to 1f
-    return Rect((1f - w) / 2f, (1f - h) / 2f, (1f + w) / 2f, (1f + h) / 2f)
-}
+/** The grid divides the crop in thirds. */
+private const val GRID_DIVISIONS = 3
 
-private enum class Handle { TL, TR, BL, BR, L, T, R, B, Move }
+/** Thickness of the grid lines. */
+private val GRID_LINE_WIDTH = 1.dp
+
+/** Thickness of the crop's outline. */
+private val OUTLINE_WIDTH = 1.5.dp
+
+/** Length of each arm of a corner handle. */
+private val CORNER_LENGTH = 20.dp
+
+/** Thickness of the corner handles. */
+private val CORNER_WIDTH = 4.dp
+
+/** What a drag on the crop moves: a corner, an edge, or the whole crop. */
+private enum class Handle { TopLeft, TopRight, BottomLeft, BottomRight, Left, Top, Right, Bottom, Move }
 
 /**
- * Crop overlay, laid out exactly over the content (same size).
- * [ratio] is the enforced width/height ratio, or null for a free crop.
+ * Crop overlay, laid out exactly over the content (same size). Corners resize the crop, edges too in a free crop,
+ * and dragging inside moves it. The parts cropped away are veiled, and a rule-of-thirds grid helps composing.
+ * Its edges sit near the screen's, so the system back gesture is kept from stealing them.
+ *
+ * @param crop the crop, normalized (0 to 1) to the content.
+ * @param ratio the enforced width / height ratio, or null for a free crop.
  */
 @Composable
 fun CropOverlay(
@@ -66,8 +65,8 @@ fun CropOverlay(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val touch = with(density) { 28.dp.toPx() }
-    val minSize = with(density) { 48.dp.toPx() }
+    val touchRadius = with(density) { TOUCH_RADIUS.toPx() }
+    val minSize = with(density) { MIN_CROP_SIZE.toPx() }
     val currentCrop by rememberUpdatedState(crop)
     val currentRatio by rememberUpdatedState(ratio)
     val onChange by rememberUpdatedState(onCropChange)
@@ -76,101 +75,111 @@ fun CropOverlay(
     Canvas(
         modifier.systemGestureExclusion().pointerInput(Unit) {
             detectDragGestures(
-                onDragStart = { p ->
-                    val r = currentCrop.toPx(size.width.toFloat(), size.height.toFloat())
-                    handle[0] = pickHandle(r, p, touch, edgesAllowed = currentRatio == null)
+                onDragStart = { position ->
+                    val rect = currentCrop.scaled(size.width.toFloat(), size.height.toFloat())
+                    handle[0] = pickHandle(rect, position, touchRadius, edgesAllowed = currentRatio == null)
                 },
                 onDragEnd = { handle[0] = null },
                 onDragCancel = { handle[0] = null },
             ) { change, drag ->
-                val h = handle[0] ?: return@detectDragGestures
+                val grabbed = handle[0] ?: return@detectDragGestures
                 change.consume()
-                val w = size.width.toFloat()
-                val hh = size.height.toFloat()
-                val r = currentCrop.toPx(w, hh)
-                val updated = dragRect(r, h, drag, w, hh, minSize, currentRatio)
-                onChange(Rect(updated.left / w, updated.top / hh, updated.right / w, updated.bottom / hh))
+                val width = size.width.toFloat()
+                val height = size.height.toFloat()
+                val updated = dragRect(currentCrop.scaled(width, height), grabbed, drag, width, height, minSize, currentRatio)
+                onChange(Rect(updated.left / width, updated.top / height, updated.right / width, updated.bottom / height))
             }
         },
     ) {
-        val r = crop.toPx(size.width, size.height)
-        val dim = Color.Black.copy(alpha = 0.55f)
-        drawRect(dim, Offset.Zero, Size(size.width, r.top))
-        drawRect(dim, Offset(0f, r.bottom), Size(size.width, size.height - r.bottom))
-        drawRect(dim, Offset(0f, r.top), Size(r.left, r.height))
-        drawRect(dim, Offset(r.right, r.top), Size(size.width - r.right, r.height))
-        val grid = Color.White.copy(alpha = 0.35f)
-        for (i in 1..2) {
-            val x = r.left + r.width * i / 3f
-            val y = r.top + r.height * i / 3f
-            drawLine(grid, Offset(x, r.top), Offset(x, r.bottom), 1.dp.toPx())
-            drawLine(grid, Offset(r.left, y), Offset(r.right, y), 1.dp.toPx())
-        }
-        drawRect(Color.White, r.topLeft, r.size, style = Stroke(1.5.dp.toPx()))
-        val len = 20.dp.toPx()
-        val sw = 4.dp.toPx()
-        val c = Color.White
-        fun corner(x: Float, y: Float, dx: Float, dy: Float) {
-            drawLine(c, Offset(x, y), Offset(x + dx * len, y), sw)
-            drawLine(c, Offset(x, y), Offset(x, y + dy * len), sw)
-        }
-        corner(r.left, r.top, 1f, 1f)
-        corner(r.right, r.top, -1f, 1f)
-        corner(r.left, r.bottom, 1f, -1f)
-        corner(r.right, r.bottom, -1f, -1f)
+        drawCrop(crop.scaled(size.width, size.height))
     }
 }
 
-private fun Rect.toPx(w: Float, h: Float) = Rect(left * w, top * h, right * w, bottom * h)
+/** Draws the veil around [rect], the grid and outline inside it, and the corner handles. */
+private fun DrawScope.drawCrop(rect: Rect) {
+    val veil = Color.Black.copy(alpha = VEIL_ALPHA)
+    drawRect(veil, Offset.Zero, Size(size.width, rect.top))
+    drawRect(veil, Offset(0f, rect.bottom), Size(size.width, size.height - rect.bottom))
+    drawRect(veil, Offset(0f, rect.top), Size(rect.left, rect.height))
+    drawRect(veil, Offset(rect.right, rect.top), Size(size.width - rect.right, rect.height))
 
-private fun pickHandle(r: Rect, p: Offset, touch: Float, edgesAllowed: Boolean): Handle? {
-    val nearL = abs(p.x - r.left) < touch
-    val nearR = abs(p.x - r.right) < touch
-    val nearT = abs(p.y - r.top) < touch
-    val nearB = abs(p.y - r.bottom) < touch
-    val inX = p.x > r.left - touch && p.x < r.right + touch
-    val inY = p.y > r.top - touch && p.y < r.bottom + touch
+    val grid = Color.White.copy(alpha = GRID_ALPHA)
+    for (i in 1 until GRID_DIVISIONS) {
+        val x = rect.left + rect.width * i / GRID_DIVISIONS
+        val y = rect.top + rect.height * i / GRID_DIVISIONS
+        drawLine(grid, Offset(x, rect.top), Offset(x, rect.bottom), GRID_LINE_WIDTH.toPx())
+        drawLine(grid, Offset(rect.left, y), Offset(rect.right, y), GRID_LINE_WIDTH.toPx())
+    }
+    drawRect(Color.White, rect.topLeft, rect.size, style = Stroke(OUTLINE_WIDTH.toPx()))
+
+    val length = CORNER_LENGTH.toPx()
+    val width = CORNER_WIDTH.toPx()
+    fun corner(x: Float, y: Float, towardsX: Float, towardsY: Float) {
+        drawLine(Color.White, Offset(x, y), Offset(x + towardsX * length, y), width)
+        drawLine(Color.White, Offset(x, y), Offset(x, y + towardsY * length), width)
+    }
+    corner(rect.left, rect.top, 1f, 1f)
+    corner(rect.right, rect.top, -1f, 1f)
+    corner(rect.left, rect.bottom, 1f, -1f)
+    corner(rect.right, rect.bottom, -1f, -1f)
+}
+
+/** This normalized rect scaled to [width] × [height] pixels. */
+private fun Rect.scaled(width: Float, height: Float) = Rect(left * width, top * height, right * width, bottom * height)
+
+/**
+ * What a drag starting at [position] grabs: a corner first, then an edge (only in a free crop, [edgesAllowed]),
+ * then the whole crop if it starts inside; null if it starts elsewhere.
+ */
+private fun pickHandle(rect: Rect, position: Offset, touchRadius: Float, edgesAllowed: Boolean): Handle? {
+    val nearLeft = abs(position.x - rect.left) < touchRadius
+    val nearRight = abs(position.x - rect.right) < touchRadius
+    val nearTop = abs(position.y - rect.top) < touchRadius
+    val nearBottom = abs(position.y - rect.bottom) < touchRadius
+    val withinX = position.x > rect.left - touchRadius && position.x < rect.right + touchRadius
+    val withinY = position.y > rect.top - touchRadius && position.y < rect.bottom + touchRadius
     return when {
-        nearL && nearT -> Handle.TL
-        nearR && nearT -> Handle.TR
-        nearL && nearB -> Handle.BL
-        nearR && nearB -> Handle.BR
-        edgesAllowed && nearL && inY -> Handle.L
-        edgesAllowed && nearR && inY -> Handle.R
-        edgesAllowed && nearT && inX -> Handle.T
-        edgesAllowed && nearB && inX -> Handle.B
-        r.contains(p) -> Handle.Move
+        nearLeft && nearTop -> Handle.TopLeft
+        nearRight && nearTop -> Handle.TopRight
+        nearLeft && nearBottom -> Handle.BottomLeft
+        nearRight && nearBottom -> Handle.BottomRight
+        edgesAllowed && nearLeft && withinY -> Handle.Left
+        edgesAllowed && nearRight && withinY -> Handle.Right
+        edgesAllowed && nearTop && withinX -> Handle.Top
+        edgesAllowed && nearBottom && withinX -> Handle.Bottom
+        rect.contains(position) -> Handle.Move
         else -> null
     }
 }
 
-private fun dragRect(r: Rect, h: Handle, d: Offset, w: Float, hh: Float, min: Float, ratio: Float?): Rect {
-    if (h == Handle.Move) {
-        val dx = d.x.coerceIn(-r.left, w - r.right)
-        val dy = d.y.coerceIn(-r.top, hh - r.bottom)
-        return r.translate(dx, dy)
+/**
+ * [rect] after dragging [handle] by [drag], kept inside the [width] × [height] content and at least [minSize].
+ * With a fixed [ratio], the opposite corner stays in place and the height follows the width.
+ */
+private fun dragRect(rect: Rect, handle: Handle, drag: Offset, width: Float, height: Float, minSize: Float, ratio: Float?): Rect {
+    if (handle == Handle.Move) {
+        return rect.translate(drag.x.coerceIn(-rect.left, width - rect.right), drag.y.coerceIn(-rect.top, height - rect.bottom))
     }
     if (ratio == null) {
-        var (l, t, rr, b) = listOf(r.left, r.top, r.right, r.bottom)
-        if (h == Handle.TL || h == Handle.BL || h == Handle.L) l = (l + d.x).coerceIn(0f, rr - min)
-        if (h == Handle.TR || h == Handle.BR || h == Handle.R) rr = (rr + d.x).coerceIn(l + min, w)
-        if (h == Handle.TL || h == Handle.TR || h == Handle.T) t = (t + d.y).coerceIn(0f, b - min)
-        if (h == Handle.BL || h == Handle.BR || h == Handle.B) b = (b + d.y).coerceIn(t + min, hh)
-        return Rect(l, t, rr, b)
+        var (left, top, right, bottom) = listOf(rect.left, rect.top, rect.right, rect.bottom)
+        if (handle in setOf(Handle.TopLeft, Handle.BottomLeft, Handle.Left)) left = (left + drag.x).coerceIn(0f, right - minSize)
+        if (handle in setOf(Handle.TopRight, Handle.BottomRight, Handle.Right)) right = (right + drag.x).coerceIn(left + minSize, width)
+        if (handle in setOf(Handle.TopLeft, Handle.TopRight, Handle.Top)) top = (top + drag.y).coerceIn(0f, bottom - minSize)
+        if (handle in setOf(Handle.BottomLeft, Handle.BottomRight, Handle.Bottom)) bottom = (bottom + drag.y).coerceIn(top + minSize, height)
+        return Rect(left, top, right, bottom)
     }
-    // Fixed ratio: anchor the opposite corner and derive the height from the width
-    val anchorX = if (h == Handle.TL || h == Handle.BL) r.right else r.left
-    val anchorY = if (h == Handle.TL || h == Handle.TR) r.bottom else r.top
-    val growLeft = anchorX == r.right
-    val growUp = anchorY == r.bottom
-    val dxSigned = if (growLeft) -d.x else d.x
-    val dySigned = if (growUp) -d.y else d.y
-    var newW = if (abs(dxSigned) >= abs(dySigned * ratio)) r.width + dxSigned else r.width + dySigned * ratio
-    val maxW = if (growLeft) anchorX else w - anchorX
-    val maxH = if (growUp) anchorY else hh - anchorY
-    newW = newW.coerceIn(min, minOf(maxW, maxH * ratio))
-    val newH = newW / ratio
-    val l = if (growLeft) anchorX - newW else anchorX
-    val t = if (growUp) anchorY - newH else anchorY
-    return Rect(l, t, l + newW, t + newH)
+    val growsLeft = handle == Handle.TopLeft || handle == Handle.BottomLeft
+    val growsUp = handle == Handle.TopLeft || handle == Handle.TopRight
+    val anchorX = if (growsLeft) rect.right else rect.left
+    val anchorY = if (growsUp) rect.bottom else rect.top
+    val dx = if (growsLeft) -drag.x else drag.x
+    val dy = if (growsUp) -drag.y else drag.y
+    val maxWidth = if (growsLeft) anchorX else width - anchorX
+    val maxHeight = if (growsUp) anchorY else height - anchorY
+    val newWidth = (if (abs(dx) >= abs(dy * ratio)) rect.width + dx else rect.width + dy * ratio)
+        .coerceIn(minSize, minOf(maxWidth, maxHeight * ratio))
+    val newHeight = newWidth / ratio
+    val left = if (growsLeft) anchorX - newWidth else anchorX
+    val top = if (growsUp) anchorY - newHeight else anchorY
+    return Rect(left, top, left + newWidth, top + newHeight)
 }

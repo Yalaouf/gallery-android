@@ -4,178 +4,99 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
-import androidx.annotation.OptIn
-import androidx.compose.ui.geometry.Rect
-import com.mephilia.gallery.R
-import androidx.media3.common.MediaItem
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.util.ExperimentalApi
-import androidx.media3.common.Effect
-import androidx.media3.common.SpeedParameters
-import androidx.media3.common.audio.SpeedProvider
-import androidx.media3.common.C
-import androidx.media3.effect.Crop
-import androidx.media3.effect.ScaleAndRotateTransformation
-import androidx.media3.transformer.Composition
-import androidx.media3.transformer.EditedMediaItem
-import androidx.media3.transformer.Effects
-import androidx.media3.transformer.ExportException
-import androidx.media3.transformer.ExportResult
-import androidx.media3.transformer.ProgressHolder
-import androidx.media3.transformer.Transformer
-import com.mephilia.gallery.ui.components.FullCrop
+import com.mephilia.gallery.data.AppSettings
+import com.mephilia.gallery.data.MediaEvents
+import com.mephilia.gallery.data.MediaItem
+import com.mephilia.gallery.data.MediaWriter
+import com.mephilia.gallery.data.StorageFolders
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
-/** [width]/[height] are the displayed size (rotation applied); [rotation] comes from the metadata. */
+/** Aspect ratio assumed when the video's size is unknown. */
+private const val DEFAULT_RATIO = 16f / 9f
+
+/** Degrees in a half turn: rotations by a multiple of it keep the width and height. */
+private const val HALF_TURN_DEGREES = 180
+
+/** Microseconds in a millisecond. */
+private const val MICROS_PER_MILLI = 1000L
+
+/** Milliseconds in a second. */
+private const val MILLIS_PER_SECOND = 1000L
+
+/** Trim bar frames are extracted at most this many times wider than tall. */
+private const val MAX_FRAME_ASPECT = 2
+
+/** File extension of a saved frame. */
+private const val FRAME_EXTENSION = "jpg"
+
+/**
+ * What [readVideoInfo] tells about a video.
+ *
+ * @param width displayed width, with the rotation applied.
+ * @param height displayed height, with the rotation applied.
+ * @param rotation the rotation from the metadata, in degrees.
+ */
 data class VideoInfo(val width: Int, val height: Int, val durationMs: Long, val rotation: Int = 0) {
-    val ratio get() = if (height > 0) width.toFloat() / height else 16f / 9f
+    /** Aspect ratio, width / height (16:9 if unknown). */
+    val ratio get() = if (height > 0) width.toFloat() / height else DEFAULT_RATIO
 }
 
+/** Reads the displayed size, duration and rotation of the video at [uri]. */
 suspend fun readVideoInfo(context: Context, uri: Uri): VideoInfo = withContext(Dispatchers.IO) {
-    MediaMetadataRetriever().use { r ->
-        r.setDataSource(context, uri)
-        val w = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
-        val h = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
-        val rot = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
-        val d = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0
-        if (rot % 180 != 0) VideoInfo(h, w, d, rot) else VideoInfo(w, h, d, rot)
+    MediaMetadataRetriever().use { retriever ->
+        retriever.setDataSource(context, uri)
+        fun metadata(key: Int) = retriever.extractMetadata(key)
+        val width = metadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+        val height = metadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+        val rotation = metadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+        val duration = metadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0
+        if (rotation % HALF_TURN_DEGREES != 0) VideoInfo(height, width, duration, rotation)
+        else VideoInfo(width, height, duration, rotation)
     }
 }
 
+/**
+ * [count] frames evenly spread over the video (each in the middle of its slice), [height] pixels tall,
+ * for the trim bar. Frames that can't be read are left out.
+ */
 suspend fun extractFrames(context: Context, uri: Uri, durationMs: Long, count: Int, height: Int): List<Bitmap> =
     withContext(Dispatchers.IO) {
-        MediaMetadataRetriever().use { r ->
-            r.setDataSource(context, uri)
+        MediaMetadataRetriever().use { retriever ->
+            retriever.setDataSource(context, uri)
             (0 until count).mapNotNull { i ->
-                val t = durationMs * 1000 * (2 * i + 1) / (2 * count)
-                r.getScaledFrameAtTime(t, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, height * 2, height)
+                val timeUs = durationMs * MICROS_PER_MILLI * (2 * i + 1) / (2 * count)
+                retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, height * MAX_FRAME_ASPECT, height)
             }
         }
     }
 
 /**
- * Exports to MP4 with Media3 Transformer. [quarterTurns] (clockwise) and [flipH] are applied
- * before [crop], which is normalized (0..1) in the displayed image.
+ * Saves the frame at [positionMs] as a JPEG photo next to the video, with the same turn, mirror and crop as
+ * the video edit. Videos are often in Movies/, which doesn't accept photos: the photo then goes to MediaStore's
+ * default folder for pictures (Pictures/).
  */
-@OptIn(UnstableApi::class, ExperimentalApi::class)
-suspend fun exportVideo(
-    context: Context,
-    uri: Uri,
-    startMs: Long,
-    endMs: Long,
-    durationMs: Long,
-    quarterTurns: Int,
-    flipH: Boolean,
-    crop: Rect,
-    out: File,
-    onProgress: (Float) -> Unit,
-    speed: Float = 1f,
-    removeAudio: Boolean = false,
-): File = withContext(Dispatchers.Main) {
-    val clipping = MediaItem.ClippingConfiguration.Builder().apply {
-        if (startMs > 0) setStartPositionMs(startMs)
-        if (endMs < durationMs) setEndPositionMs(endMs)
-    }.build()
-    val mediaItem = MediaItem.Builder().setUri(uri).setClippingConfiguration(clipping).build()
-    val videoEffects = buildList<Effect> {
-        val turns = quarterTurns.mod(4)
-        // Media3 rotates counterclockwise
-        if (turns != 0) add(ScaleAndRotateTransformation.Builder().setRotationDegrees(-90f * turns).build())
-        if (flipH) add(ScaleAndRotateTransformation.Builder().setScale(-1f, 1f).build())
-        // OpenGL normalized coordinates: x and y in [-1, 1], y pointing up
-        if (crop != FullCrop) glCrop(crop).let { (l, r, b, t) -> add(Crop(l, r, b, t)) }
-    }
-    val effects = if (videoEffects.isEmpty()) Effects.EMPTY else Effects(emptyList(), videoEffects)
-    val edited = EditedMediaItem.Builder(mediaItem).setEffects(effects).apply {
-        // Constant speed; the sound keeps its pitch
-        if (speed != 1f) setSpeed(SpeedParameters(object : SpeedProvider {
-            override fun getSpeed(timeUs: Long) = speed
-            override fun getNextSpeedChangeTimeUs(timeUs: Long) = C.TIME_UNSET
-        }, true))
-        if (removeAudio) setRemoveAudio(true)
-    }.build()
-
-    suspendCancellableCoroutine { cont ->
-        val handler = Handler(Looper.getMainLooper())
-        val transformer = Transformer.Builder(context)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    if (cont.isActive) cont.resume(out)
-                }
-
-                override fun onError(
-                    composition: Composition,
-                    exportResult: ExportResult,
-                    exportException: ExportException,
-                ) {
-                    if (cont.isActive) cont.resumeWithException(
-                        Exception(context.getString(R.string.error_video_export, exportException.errorCodeName), exportException),
-                    )
-                }
-            })
-            .build()
-        transformer.start(edited, out.absolutePath)
-
-        val holder = ProgressHolder()
-        val poll = object : Runnable {
-            override fun run() {
-                if (!cont.isActive) return
-                if (transformer.getProgress(holder) == Transformer.PROGRESS_STATE_AVAILABLE) {
-                    onProgress(holder.progress / 100f)
-                }
-                handler.postDelayed(this, 200)
-            }
-        }
-        handler.post(poll)
-        cont.invokeOnCancellation {
-            handler.post {
-                handler.removeCallbacks(poll)
-                transformer.cancel()
-                out.delete()
-            }
-        }
-    }
-}
-
-/**
- * Saves the frame at [positionMs] as a JPEG photo next to the video, with the same rotation, mirror and crop
- * as the video edit.
- */
-suspend fun saveVideoFrame(context: Context, item: com.mephilia.gallery.data.MediaItem, positionMs: Long, edits: PhotoEdits) {
+suspend fun saveVideoFrame(context: Context, item: MediaItem, positionMs: Long, edits: PhotoEdits) {
     val frame = withContext(Dispatchers.IO) {
-        MediaMetadataRetriever().use { r ->
-            r.setDataSource(context, item.uri)
-            r.getFrameAtTime(positionMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)
+        MediaMetadataRetriever().use { retriever ->
+            retriever.setDataSource(context, item.uri)
+            retriever.getFrameAtTime(positionMs * MICROS_PER_MILLI, MediaMetadataRetriever.OPTION_CLOSEST)
         }
     } ?: error("No frame")
     val result = withContext(Dispatchers.Default) { frame.applyEdits(edits) }
-    val writer = com.mephilia.gallery.data.MediaWriter(context)
-    val file = writer.tempFile("jpg")
+    val writer = MediaWriter(context)
+    val file = writer.tempFile(FRAME_EXTENSION)
     try {
         withContext(Dispatchers.IO) {
-            file.outputStream().use { result.compress(Bitmap.CompressFormat.JPEG, com.mephilia.gallery.data.AppSettings.current.jpegQuality, it) }
+            file.outputStream().use { result.compress(Bitmap.CompressFormat.JPEG, AppSettings.current.jpegQuality, it) }
         }
-        val name = item.name.substringBeforeLast('.', item.name) + "_frame_${positionMs / 1000}s.jpg"
-        // Videos are often in Movies/, which doesn't accept photos: MediaWriter falls back to Pictures/Gallery
-        writer.insertCopy(item.copy(relativePath = item.relativePath.takeUnless { it.startsWith("Movies") }.orEmpty()), file, name, "image/jpeg")
-        com.mephilia.gallery.data.MediaEvents.changed()
+        val name = item.name.substringBeforeLast('.', item.name) + "_frame_${positionMs / MILLIS_PER_SECOND}s.$FRAME_EXTENSION"
+        val folder = item.relativePath.takeUnless { it.startsWith(StorageFolders.MOVIES) }.orEmpty()
+        writer.insertCopy(item.copy(relativePath = folder), file, name, JPEG_MIME)
+        MediaEvents.changed()
     } finally {
         file.delete()
         if (result !== frame) result.recycle()
         frame.recycle()
     }
 }
-
-/**
- * Converts a normalized crop (0..1, y pointing down) to OpenGL coordinates as Media3's Crop expects them:
- * left, right, bottom, top in [-1, 1] with y pointing up.
- */
-internal fun glCrop(crop: Rect): List<Float> =
-    listOf(2 * crop.left - 1, 2 * crop.right - 1, 1 - 2 * crop.bottom, 1 - 2 * crop.top)

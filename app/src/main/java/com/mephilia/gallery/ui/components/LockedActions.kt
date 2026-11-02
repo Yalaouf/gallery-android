@@ -16,7 +16,7 @@ suspend fun moveToLocked(context: Context, access: MediaAccess, items: List<Medi
     val copies = ArrayList<MediaItem>()
     try {
         for (item in items) copies += store.add(item)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         store.discard(copies.map { it.id })
         Toast.makeText(context, context.getString(R.string.lock_failed), Toast.LENGTH_LONG).show()
         return false
@@ -27,18 +27,18 @@ suspend fun moveToLocked(context: Context, access: MediaAccess, items: List<Medi
     }
     MediaEvents.removed(items.map { it.id })
     MediaEvents.changed()
-    val n = items.size
-    Toast.makeText(context, context.resources.getQuantityString(R.plurals.moved_to_locked, n, n), Toast.LENGTH_SHORT).show()
+    val count = items.size
+    Toast.makeText(context, context.resources.getQuantityString(R.plurals.moved_to_locked, count, count), Toast.LENGTH_SHORT).show()
     return true
 }
 
-/** Puts locked items back in the gallery. */
+/** Puts locked items back in the gallery, and says how many made it. */
 suspend fun restoreFromLocked(context: Context, items: List<MediaItem>) {
     val failed = LockedStore(context).restore(items)
     MediaEvents.removed(items.map { it.id })
     MediaEvents.changed()
-    val ok = items.size - failed
-    Toast.makeText(context, context.resources.getQuantityString(R.plurals.restored_from_locked, ok, ok), Toast.LENGTH_SHORT).show()
+    val restored = items.size - failed
+    Toast.makeText(context, context.resources.getQuantityString(R.plurals.restored_from_locked, restored, restored), Toast.LENGTH_SHORT).show()
 }
 
 /** Deletes locked items for good. */

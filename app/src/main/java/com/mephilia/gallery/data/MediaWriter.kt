@@ -8,68 +8,56 @@ import com.mephilia.gallery.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 
+/** Milliseconds in a second. */
+private const val MILLIS_PER_SECOND = 1000
+
+/**
+ * Writes to the shared storage through MediaStore: replaces files with their edited version, adds copies,
+ * moves, copies and renames items. Everything runs on the IO dispatcher.
+ */
 class MediaWriter(private val context: Context) {
+    /** Writes through MediaStore. */
     private val resolver = context.contentResolver
 
+    /** How many items the last [move] couldn't move. */
+    var lastMoveFailures = 0
+        private set
+
+    /** Replaces the content of [target] with [source]. Needs write access (see MediaAccess). */
     suspend fun overwrite(target: Uri, source: File) = withContext(Dispatchers.IO) {
-        writeSynced(target, source, "wt")
+        source.inputStream().use { resolver.writeSynced(target, MODE_WRITE_TRUNCATE, it) }
     }
 
-    /** Syncs to storage so a save can't leave an empty file if the phone shuts down right after. */
-    private fun writeSynced(target: Uri, source: File, mode: String) {
-        resolver.openFileDescriptor(target, mode)!!.use { pfd ->
-            FileOutputStream(pfd.fileDescriptor).use { out ->
-                source.inputStream().use { it.copyTo(out) }
-                out.flush()
-                out.fd.sync()
+    /**
+     * Adds [source] as a new file named [displayName], in the folder of [original] if it accepts the type,
+     * otherwise in the app's own folder. The collection follows the output type: a GIF made from a video
+     * goes to the images.
+     *
+     * @throws IllegalStateException if the file can't be created.
+     */
+    suspend fun insertCopy(original: MediaItem, source: File, displayName: String, mimeType: String): Uri =
+        withContext(Dispatchers.IO) {
+            val isVideo = isVideoMime(mimeType)
+            val collection = mediaCollection(isVideo)
+            val uri = resolver.insertPending(collection, displayName, mimeType, original.relativePath)
+                ?: resolver.insertPending(collection, displayName, mimeType, StorageFolders.appFolder(isVideo))
+                ?: error(context.getString(R.string.error_create_file))
+            try {
+                source.inputStream().use { resolver.writeSynced(uri, MODE_WRITE, it) }
+                resolver.publish(uri)
+            } catch (e: Exception) {
+                resolver.delete(uri, null, null)
+                throw e
             }
-        }
-    }
-
-    suspend fun insertCopy(
-        original: MediaItem,
-        source: File,
-        displayName: String,
-        mimeType: String,
-    ): Uri = withContext(Dispatchers.IO) {
-        // Based on the output type: a GIF made from a video goes to the images collection
-        val isVideo = mimeType.startsWith("video/")
-        val collection = if (isVideo) {
-            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        } else {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        }
-        val fallbackDir = if (isVideo) "Movies/Gallery/" else "Pictures/Gallery/"
-        val uri = tryInsert(collection, displayName, mimeType, original.relativePath)
-            ?: tryInsert(collection, displayName, mimeType, fallbackDir)
-            ?: error(context.getString(R.string.error_create_file))
-        try {
-            writeSynced(uri, source, "w")
-            resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            throw e
-        }
-        uri
-    }
-
-    private fun tryInsert(collection: Uri, name: String, mime: String, relativePath: String): Uri? =
-        try {
-            resolver.insert(collection, ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                if (relativePath.isNotBlank()) put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            })
-        } catch (_: Exception) {
-            null
+            uri
         }
 
     /**
-     * Moves items to [relativePath] (e.g. "Pictures/Holidays/"). Needs write access (see MediaAccess):
-     * throws SecurityException without it. The number of failed items is in [lastMoveFailures].
+     * Moves [items] to the folder [relativePath] (e.g. "Pictures/Holidays/"). Items the folder refuses
+     * (an image into Movies/ or Music/…) are counted in [lastMoveFailures].
+     *
+     * @throws SecurityException without write access (see MediaAccess).
      */
     suspend fun move(items: List<MediaItem>, relativePath: String) = withContext(Dispatchers.IO) {
         val values = ContentValues().apply { put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath) }
@@ -79,33 +67,19 @@ class MediaWriter(private val context: Context) {
             } catch (e: SecurityException) {
                 throw e
             } catch (_: Exception) {
-                // e.g. an image into a folder that doesn't accept images (Movies/, Music/…)
                 true
             }
         }
     }
 
-    var lastMoveFailures = 0
-        private set
-
-    /** Copies items to [relativePath]. Returns the number of failures. Needs no write access. */
+    /** Copies [items] to the folder [relativePath]. Needs no write access. Returns how many failed. */
     suspend fun copy(items: List<MediaItem>, relativePath: String): Int = withContext(Dispatchers.IO) {
         items.count { item ->
-            val isVideo = item.isVideo
-            val collection = if (isVideo) MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            else MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-            val uri = tryInsert(collection, item.name, item.mimeType, relativePath) ?: return@count true
+            val uri = resolver.insertPending(mediaCollection(item.isVideo), item.name, item.mimeType, relativePath)
+                ?: return@count true
             try {
-                resolver.openInputStream(item.uri)!!.use { input ->
-                    resolver.openFileDescriptor(uri, "w")!!.use { pfd ->
-                        FileOutputStream(pfd.fileDescriptor).use { out ->
-                            input.copyTo(out)
-                            out.flush()
-                            out.fd.sync()
-                        }
-                    }
-                }
-                resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                checkNotNull(resolver.openInputStream(item.uri)).use { resolver.writeSynced(uri, MODE_WRITE, it) }
+                resolver.publish(uri)
                 false
             } catch (_: Exception) {
                 resolver.delete(uri, null, null)
@@ -114,23 +88,27 @@ class MediaWriter(private val context: Context) {
         }
     }
 
-    /** Renames a file, keeping its extension. Throws SecurityException without write access. */
+    /**
+     * Renames [item] to [newBaseName], keeping its extension.
+     *
+     * @throws SecurityException without write access (see MediaAccess).
+     * @throws IllegalStateException if MediaStore refused the new name.
+     */
     suspend fun rename(item: MediaItem, newBaseName: String) = withContext(Dispatchers.IO) {
-        val ext = item.name.substringAfterLast('.', "")
-        val name = if (ext.isEmpty()) newBaseName else "$newBaseName.$ext"
-        val updated = resolver.update(
-            item.uri, ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, name) }, null, null,
-        )
-        if (updated == 0) error(context.getString(R.string.error_rename))
+        val extension = item.name.substringAfterLast('.', "")
+        val name = if (extension.isEmpty()) newBaseName else "$newBaseName.$extension"
+        val values = ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, name) }
+        if (resolver.update(item.uri, values, null, null) == 0) error(context.getString(R.string.error_rename))
     }
 
-    fun tempFile(extension: String): File =
-        File(context.cacheDir, "edit_${System.currentTimeMillis()}.$extension")
+    /** A new temporary file in the cache, for rendering an edit before it's saved. */
+    fun tempFile(extension: String): File = File(context.cacheDir, "edit_${System.currentTimeMillis()}.$extension")
 
     companion object {
+        /** The name of an edited copy of [original]: its name with "_edit_" and the time, and the new [extension]. */
         fun copyName(original: String, extension: String): String {
             val base = original.substringBeforeLast('.', original)
-            return "${base}_edit_${System.currentTimeMillis() / 1000}.$extension"
+            return "${base}_edit_${System.currentTimeMillis() / MILLIS_PER_SECOND}.$extension"
         }
     }
 }

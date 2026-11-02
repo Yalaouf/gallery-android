@@ -1,0 +1,4 @@
+Nouveautés de la 1.5 :
+• Glissez une photo ou une vidéo vers le haut ou le bas pour la fermer
+• Geste retour animé
+• Correction des carrés vides après une suppression depuis une autre application

@@ -39,7 +39,7 @@ An F-Droid release is planned.
 **Browse**
 - **Photos**: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns
 - **Albums**: your folders, sorted by date modified, date created or name, with a search bar
-- Full-screen viewer with pinch and double-tap zoom, animated GIFs, and a video player with its own controls
+- Full-screen viewer with pinch and double-tap zoom, animated GIFs, a video player with its own controls, and swipe up or down to close
 - Videos start muted in split screen, so the other app (e.g. YouTube) keeps playing
 
 **Organize**

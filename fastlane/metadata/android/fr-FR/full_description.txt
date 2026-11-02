@@ -4,7 +4,7 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <ul>
 <li><b>Photos</b> : tout est regroupé par jour. Triez par date, nom, taille ou au hasard, affichez seulement les photos ou les vidéos, choisissez de 2 à 6 colonnes.</li>
 <li><b>Albums</b> : vos dossiers, triés par date de modification, date de création ou nom, avec recherche.</li>
-<li>Visionneuse plein écran avec zoom (pincer ou double-tap) et lecteur vidéo.</li>
+<li>Visionneuse plein écran avec zoom (pincer ou double-tap) et lecteur vidéo. Glissez vers le haut ou le bas pour fermer.</li>
 </ul>
 
 <b>Organiser</b>

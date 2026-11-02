@@ -3,7 +3,15 @@ package com.mephilia.gallery.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.compose.BackHandler
+import androidx.activity.BackEventCompat
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -144,6 +152,7 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
         val previous = access
         access = currentAccess()
         if (access != previous && access != Access.None) vm.reload()
+        else if (access != Access.None) vm.refresh()
     }
     LaunchedEffect(Unit) {
         if (access == Access.None) launcher.launch(mediaPermissions)
@@ -161,10 +170,36 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
     var homeTab by rememberSaveable { mutableIntStateOf(AppSettings.current.startTab) }
     val holder = rememberSaveableStateHolder()
 
-    BackHandler(enabled = nav.stack.size > 1) {
-        nav.pop()?.let { holder.removeState(it.key) }
+    // Predictive back: during the system back swipe the current screen shrinks and follows the finger,
+    // then closes when the swipe is released (or springs back if it's cancelled)
+    val backProgress = remember { Animatable(0f) }
+    var backFromLeft by remember { mutableStateOf(true) }
+    var backKey by remember { mutableStateOf<String?>(null) }
+    var backActive by remember { mutableStateOf(false) }
+    fun pop() = nav.pop()?.let { holder.removeState(it.key) }
+    // Back buttons: no swipe animation on the closing screen
+    val back: () -> Unit = { backKey = null; pop() }
+    val scope = rememberCoroutineScope()
+    PredictiveBackHandler(enabled = nav.stack.size > 1) { events ->
+        // Reset first: the back button (3-button navigation) sends no progress at all
+        backProgress.snapTo(0f)
+        backKey = nav.current.key
+        backActive = true
+        try {
+            events.collect { event ->
+                backFromLeft = event.swipeEdge != BackEventCompat.EDGE_RIGHT
+                backProgress.snapTo(event.progress)
+            }
+            backActive = false
+            pop()
+        } catch (e: CancellationException) {
+            scope.launch {
+                backProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                backActive = false
+            }
+            throw e
+        }
     }
-    val back: () -> Unit = { nav.pop()?.let { holder.removeState(it.key) } }
 
     AnimatedContent(
         targetState = nav.current,
@@ -177,6 +212,20 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
         label = "nav",
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
     ) { route ->
+        // The screen being swiped back keeps its shape while it fades out, the one below isn't affected
+        val swiped = route.key == backKey &&
+            (backActive || transition.targetState == EnterExitState.PostExit)
+        Box(
+            if (!swiped) Modifier else Modifier.graphicsLayer {
+                val p = backProgress.value
+                val scale = 1f - 0.1f * p
+                scaleX = scale
+                scaleY = scale
+                translationX = (if (backFromLeft) 1f else -1f) * p * 24.dp.toPx()
+                shape = RoundedCornerShape(32.dp * p)
+                clip = true
+            },
+        ) {
         holder.SaveableStateProvider(route.key) {
             when (route) {
                 Route.Home -> HomeScreen(
@@ -222,6 +271,7 @@ fun GalleryRoot(vm: GalleryViewModel = viewModel()) {
                 is Route.EditVideo -> VideoEditorScreen(item = route.item, onClose = back)
                 is Route.EditGif -> GifEditorScreen(item = route.item, onClose = back)
             }
+        }
         }
     }
 }

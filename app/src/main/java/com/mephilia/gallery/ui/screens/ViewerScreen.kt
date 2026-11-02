@@ -103,6 +103,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,12 +164,64 @@ fun ViewerScreen(
     val access = rememberMediaAccess()
     val scope = rememberCoroutineScope()
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    // Swipe the picture up or down to close the viewer: it follows the finger and the background fades out.
+    // Zoomed-in pictures and pinches consume their moves, so they never trigger it.
+    val dismiss = remember { Animatable(0f) }
+    var dismissing by remember { mutableStateOf(false) }
+    var barsBeforeDrag by remember { mutableStateOf(true) }
+    val dismissDistance = with(density) { 120.dp.toPx() }
+    val dismissVelocity = with(density) { 1000.dp.toPx() }
+    val fade = (kotlin.math.abs(dismiss.value) / (dismissDistance * 3f)).coerceIn(0f, 1f)
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 1f - fade))
+            .pointerInput(Unit) {
+                val velocity = VelocityTracker()
+                detectVerticalDragGestures(
+                    onDragStart = {
+                        velocity.resetTracking()
+                        barsBeforeDrag = showBars
+                        showBars = false
+                    },
+                    onVerticalDrag = { change, dy ->
+                        change.consume()
+                        velocity.addPosition(change.uptimeMillis, change.position)
+                        scope.launch { dismiss.snapTo(dismiss.value + dy) }
+                    },
+                    onDragEnd = {
+                        val v = velocity.calculateVelocity().y
+                        val offset = dismiss.value
+                        val flung = kotlin.math.abs(v) > dismissVelocity && kotlin.math.sign(v) == kotlin.math.sign(offset)
+                        if (!dismissing && (kotlin.math.abs(offset) > dismissDistance || flung)) {
+                            dismissing = true
+                            onBack()
+                        } else scope.launch {
+                            showBars = barsBeforeDrag
+                            dismiss.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch {
+                            showBars = barsBeforeDrag
+                            dismiss.animateTo(0f)
+                        }
+                    },
+                )
+            },
+    ) {
         HorizontalPager(
             state = pager,
             key = { list.getOrNull(it)?.id ?: it },
             beyondViewportPageCount = 1,
-            modifier = Modifier.fillMaxSize(),
+            userScrollEnabled = dismiss.value == 0f,
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                translationY = dismiss.value
+                val scale = 1f - 0.25f * fade
+                scaleX = scale
+                scaleY = scale
+            },
         ) { page ->
             val item = list[page]
             if (item.isVideo) {

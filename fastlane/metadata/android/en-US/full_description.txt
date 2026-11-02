@@ -4,7 +4,7 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <ul>
 <li><b>Photos</b>: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns.</li>
 <li><b>Albums</b>: your folders, sorted by date modified, date created or name, with search.</li>
-<li>Full-screen viewer with pinch and double-tap zoom, and a video player.</li>
+<li>Full-screen viewer with pinch and double-tap zoom, and a video player. Swipe up or down to close.</li>
 </ul>
 
 <b>Organize</b>

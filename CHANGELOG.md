@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
+## [1.5] — 2026-11-02
+
+### Added
+- **Swipe to close**: in the viewer, swipe a photo or video up or down to go back. It follows the finger, shrinks
+  and the background fades; release it early and it springs back. Zoomed-in pictures and pinches don't trigger it.
+- **Animated back gesture**: during Android's back swipe, the current screen shrinks and follows the finger,
+  then closes on release or comes back if the swipe is cancelled.
+
+### Fixed
+- **Dark squares after deleting from another app**: pictures deleted elsewhere (e.g. in another gallery) stayed as
+  empty squares until the app was restarted, because Android drops change notifications while the app is in the
+  background. The gallery now refreshes whenever it comes back to the foreground.
+
 ## [1.4] — 2026-11-01
 
 ### Fixed
@@ -91,6 +104,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.4...v1.5
 [1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.3...v1.4
 [1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.2...v1.3
 [1.2]: https://github.com/Yalaouf/gallery-android/compare/v1.1...v1.2

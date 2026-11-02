@@ -113,6 +113,14 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Called when the app comes back to the foreground. While in the background the app may be frozen by Android,
+     * and MediaStore's change notifications (e.g. files deleted from another gallery) are then lost.
+     */
+    fun refresh() {
+        if (started) reload()
+    }
+
     fun reloadTrash() {
         viewModelScope.launch {
             trash.value = if (AppSettings.current.showTrash) repo.loadTrash() else emptyList()

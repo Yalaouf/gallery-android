@@ -1,5 +1,8 @@
 package com.mephilia.gallery.ui
 
+import com.mephilia.gallery.data.LatestLoader
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 import com.mephilia.gallery.data.MediaQueries
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -65,23 +68,23 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     val media: StateFlow<List<MediaItem>> =
         combine(all, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
             sortMedia(filterMedia(items, filter), sort, seed)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val albums: StateFlow<List<Album>> =
         combine(all, albumSort, albumSortDescending) { items, sort, desc ->
             MediaQueries.albums(items, sort, desc)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val favorites: StateFlow<List<MediaItem>> =
         all.map { list -> list.filter { it.favorite }.sortedByDescending { it.dateTaken } }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+            .flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Photos and videos taken on today's date in previous years, newest year first. */
     val onThisDay: StateFlow<List<MediaItem>> =
         all.map { list ->
             val zone = ZoneId.systemDefault()
             MediaQueries.onThisDay(list, LocalDate.now(zone), zone)
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** A folder, or one of the pseudo albums (favorites, on this day, locked folder). */
     fun albumMedia(bucketId: Long): Flow<List<MediaItem>> = when (bucketId) {
@@ -91,10 +94,10 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         // All photos or all videos, in the chosen sort (the photos/videos filter doesn't apply here)
         PHOTOS_ID, VIDEOS_ID -> combine(all, mediaSort, shuffleSeed) { items, sort, seed ->
             sortMedia(items.filter { it.isVideo == (bucketId == VIDEOS_ID) }, sort, seed)
-        }
+        }.flowOn(Dispatchers.Default)
         else -> combine(all, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
             sortMedia(filterMedia(items.filter { it.bucketId == bucketId }, filter), sort, seed)
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     fun unlock() {
@@ -102,14 +105,40 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         reloadLocked()
     }
 
+    // Each list keeps only its latest load: an older, slower query can't overwrite a newer result
+    private val mediaLoader = LatestLoader(
+        viewModelScope,
+        load = { repo.loadAll() },
+        apply = { items ->
+            all.value = items.map { item ->
+                // MediaStore dates have 1 s precision: keep our more precise replace time unless the file
+                // changed again since, otherwise the image cache key flips and the picture reloads (black flash)
+                val replaced = replacedAt[item.id]
+                if (replaced != null && replaced > item.dateModified) item.copy(dateModified = replaced) else item
+            }
+            loading.value = false
+        },
+    )
+    private val trashLoader = LatestLoader(
+        viewModelScope,
+        load = { if (AppSettings.current.showTrash) repo.loadTrash() else emptyList() },
+        apply = { trash.value = it },
+    )
+    private val lockedLoader = LatestLoader(
+        viewModelScope,
+        load = { lockedStore.load() },
+        // Relocked while loading: the hidden items must not come back into memory
+        apply = { if (lockedUnlocked.value) locked.value = it },
+    )
+
     fun relock() {
         lockedUnlocked.value = false
+        lockedLoader.cancel()
         locked.value = emptyList()
     }
 
     fun reloadLocked() {
-        if (!lockedUnlocked.value) return
-        viewModelScope.launch { locked.value = lockedStore.load() }
+        if (lockedUnlocked.value) lockedLoader.reload()
     }
 
     private var started = false
@@ -121,13 +150,19 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             MediaEvents.events.collect { event ->
                 when (event) {
-                    is MediaEvents.Event.Favorited -> all.update { list ->
-                        list.map { if (it.id in event.ids) it.copy(favorite = event.favorite) else it }
+                    // These change the list right away; a load started before would bring the old state back
+                    is MediaEvents.Event.Favorited -> {
+                        all.update { list ->
+                            list.map { if (it.id in event.ids) it.copy(favorite = event.favorite) else it }
+                        }
+                        mediaLoader.restartIfLoading()
                     }
                     is MediaEvents.Event.Removed -> {
                         locked.update { list -> list.filter { it.id !in event.ids } }
                         all.update { list -> list.filter { it.id !in event.ids } }
                         trash.update { list -> list.filter { it.id !in event.ids } }
+                        mediaLoader.restartIfLoading()
+                        lockedLoader.restartIfLoading()
                         reloadTrash()
                     }
                     // A new dateModified changes the image cache keys, so the new content is loaded right away
@@ -135,6 +170,7 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
                         val now = System.currentTimeMillis()
                         replacedAt[event.id] = now
                         all.update { list -> list.map { if (it.id == event.id) it.copy(dateModified = now) else it } }
+                        mediaLoader.restartIfLoading()
                     }
                     MediaEvents.Event.Changed -> {
                         reload()
@@ -163,23 +199,11 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
         if (started) reload()
     }
 
-    fun reloadTrash() {
-        viewModelScope.launch {
-            trash.value = if (AppSettings.current.showTrash) repo.loadTrash() else emptyList()
-        }
-    }
+    fun reloadTrash() = trashLoader.reload()
 
     fun reload() {
         reloadTrash()
-        viewModelScope.launch {
-            all.value = repo.loadAll().map { item ->
-                // MediaStore dates have 1 s precision: keep our more precise replace time unless the file
-                // changed again since, otherwise the image cache key flips and the picture reloads (black flash)
-                val replaced = replacedAt[item.id]
-                if (replaced != null && replaced > item.dateModified) item.copy(dateModified = replaced) else item
-            }
-            loading.value = false
-        }
+        mediaLoader.reload()
     }
 
     fun setMediaSort(sort: MediaSort) {

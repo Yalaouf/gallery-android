@@ -241,7 +241,7 @@
         <item quantity="many">Déplacer %1$d éléments vers le dossier verrouillé ?</item>
         <item quantity="other">Déplacer %1$d éléments vers le dossier verrouillé ?</item>
     </plurals>
-    <string name="lock_text">Ils seront masqués de la galerie et des autres applications, et visibles uniquement après déverrouillage par empreinte ou verrouillage de l\'écran. Les éléments verrouillés sont supprimés si vous désinstallez l\'application, et ne sont pas inclus dans les sauvegardes en ligne.</string>
+    <string name="lock_text">Ils seront masqués de la galerie et des autres applications, et visibles uniquement après déverrouillage par empreinte ou verrouillage de l\'écran. Les éléments verrouillés sont supprimés si vous désinstallez l\'application, et ne sont pas inclus dans les sauvegardes en ligne. Les fichiers sont masqués, pas chiffrés.</string>
     <plurals name="copied_to">
         <item quantity="one">%1$d élément copié vers %2$s</item>
         <item quantity="many">%1$d éléments copiés vers %2$s</item>
@@ -275,7 +275,7 @@
     <string name="locked_title">Dossier verrouillé</string>
     <string name="locked_prompt">Déverrouillez pour voir vos photos et vidéos masquées</string>
     <string name="locked_empty">Rien pour l\'instant. Sélectionnez des photos ou vidéos et choisissez « Déplacer vers le dossier verrouillé » dans le menu ⋮ pour les masquer ici.</string>
-    <string name="locked_explainer">Les photos et vidéos d\'ici sont masquées de la galerie et des autres applications. Elles restent uniquement sur ce téléphone : pas dans les sauvegardes en ligne, et supprimées si vous désinstallez l\'application.</string>
+    <string name="locked_explainer">Les photos et vidéos d\'ici sont masquées de la galerie et des autres applications. Elles restent uniquement sur ce téléphone : pas dans les sauvegardes en ligne, et supprimées si vous désinstallez l\'application. Les fichiers sont masqués, pas chiffrés : quelqu\'un ayant un accès complet au téléphone (téléphone rooté, transfert vers un autre téléphone) pourrait encore les lire.</string>
     <string name="locked_no_screen_lock">Configurez un verrouillage de l\'écran (code, schéma, mot de passe ou empreinte) dans les paramètres d\'Android pour utiliser le dossier verrouillé.</string>
     <string name="locked_unlock">Déverrouiller</string>
     <string name="new_album_pick">Choisissez les photos et vidéos à ajouter</string>

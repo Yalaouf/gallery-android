@@ -90,6 +90,34 @@ class LockedStoreTest {
     }
 
     @Test
+    fun damagedIndexKeepsOriginalFoldersFromTheBackup() = runBlocking {
+        val store = LockedStore(context)
+        val a = store.add(source("a.jpg", byteArrayOf(1)))
+        val b = store.add(source("b.jpg", byteArrayOf(2)))
+        store.add(source("c.jpg", byteArrayOf(3)))
+        File(lockedDir, "index.json").writeText("{ not json")
+
+        // The backup is one change behind: a and b come back with their folder and date, c as a recovered file
+        val recovered = LockedStore(context).load().associateBy { it.name }
+        for (item in listOf(a, b)) {
+            assertEquals("DCIM/Camera/", recovered.getValue(item.name).relativePath)
+            assertEquals(1_700_000_000_000, recovered.getValue(item.name).dateTaken)
+        }
+        assertEquals(3, recovered.size)
+    }
+
+    @Test
+    fun backupDoesNotBringBackDeletedItems() = runBlocking {
+        val store = LockedStore(context)
+        val a = store.add(source("a.jpg", byteArrayOf(1)))
+        val b = store.add(source("b.jpg", byteArrayOf(2)))
+        store.discard(listOf(b.id))
+        // The backup still lists b, but its file is gone
+        File(lockedDir, "index.json").delete()
+        assertEquals(listOf(a.id), LockedStore(context).load().map { it.id })
+    }
+
+    @Test
     fun missingFilesAreSkippedNotFatal() = runBlocking {
         val store = LockedStore(context)
         val gone = store.add(source("gone.jpg", byteArrayOf(1)))

@@ -1,0 +1,4 @@
+New in 2.1.2:
+• Smoother scrolling in large libraries
+• Fixed a deleted photo briefly coming back after a refresh
+• Locked folder: safer index with a backup, and a clear note that files are hidden, not encrypted

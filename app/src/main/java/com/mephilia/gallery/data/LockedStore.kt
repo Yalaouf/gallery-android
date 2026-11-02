@@ -13,6 +13,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * The locked folder: files moved into the app's private storage, where other apps (and Android's media
@@ -24,6 +26,8 @@ class LockedStore(context: Context) {
     private val resolver = context.contentResolver
     private val dir = File(context.filesDir, "locked").apply { mkdirs() }
     private val indexFile = File(dir, "index.json")
+    /** The index as it was before the last change, used if the current one is damaged. */
+    private val backupFile = File(dir, "index.json.bak")
 
     private data class Entry(
         val id: Long,
@@ -143,7 +147,8 @@ class LockedStore(context: Context) {
      * what the file itself tells (name, type, date), so a hidden photo can never become unreachable.
      */
     private fun readIndex(): List<Entry> {
-        val indexed = parseIndex()
+        // The backup is one change behind: it may list files deleted since, which are dropped here
+        val indexed = (parse(indexFile) ?: parse(backupFile).orEmpty()).filter { File(dir, it.file).exists() }
         val known = indexed.mapTo(HashSet()) { it.file }
         val orphans = dir.listFiles().orEmpty().filter {
             it.isFile && it.name !in known && !it.name.startsWith("index.json")
@@ -159,10 +164,11 @@ class LockedStore(context: Context) {
         return indexed + orphans
     }
 
-    private fun parseIndex(): List<Entry> {
-        if (!indexFile.exists()) return emptyList()
+    /** The entries of an index file, or null if it's missing or unreadable. */
+    private fun parse(file: File): List<Entry>? {
+        if (!file.exists()) return null
         return runCatching {
-            val arr = JSONArray(indexFile.readText())
+            val arr = JSONArray(file.readText())
             (0 until arr.length()).map { i ->
                 val o = arr.getJSONObject(i)
                 Entry(
@@ -171,7 +177,7 @@ class LockedStore(context: Context) {
                     o.optInt("w"), o.optInt("h"), o.optLong("duration"),
                 )
             }
-        }.getOrDefault(emptyList())
+        }.getOrNull()
     }
 
     private fun writeIndex(entries: List<Entry>) {
@@ -183,13 +189,16 @@ class LockedStore(context: Context) {
                 put("w", e.width); put("h", e.height); put("duration", e.durationMs)
             })
         }
-        // Write then rename, so a crash can't leave a half-written index
+        // Keep the current index as the backup, unless it's damaged (the backup is then the better copy)
+        if (parse(indexFile) != null) indexFile.copyTo(backupFile, overwrite = true)
+        // Write then replace in one step, so a crash can't leave a half-written index
         val tmp = File(dir, "index.json.tmp")
         FileOutputStream(tmp).use { out ->
             out.write(arr.toString().toByteArray())
             out.fd.sync()
         }
-        tmp.renameTo(indexFile)
+        // Throws if it fails, rather than silently keeping the old index
+        Files.move(tmp.toPath(), indexFile.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
     }
 
     companion object {

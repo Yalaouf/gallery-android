@@ -3,6 +3,23 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
+## [2.1.2] — 2026-11-02
+
+### Fixed
+- **Smoother with large libraries**: sorting, filtering and grouping into albums now run in the background instead
+  of on the main thread, so scrolling no longer stutters after a refresh.
+- **Outdated lists**: when several refreshes overlapped, a slower, older one could finish last and overwrite the newer
+  result, briefly bringing back a photo you had just deleted. Only the latest refresh is kept now, and one that
+  started before a change (delete, favorite, edit) is restarted.
+- **Locked folder**: a load still running when the app relocked could put the hidden items back in memory. It's now
+  cancelled on relock.
+- **Locked folder index**: the previous version of the index is kept as a backup, so if the index is ever damaged the
+  hidden items keep their original folder and date. Writing the index now fails loudly instead of silently keeping
+  the old one.
+
+### Changed
+- The locked folder's explanations (in the app and the README) now say that files are hidden, not encrypted.
+
 ## [2.1.1] — 2026-11-02
 
 The 2.1 release was published with the version number of 2.0 (it showed "2.0" in Settings and wasn't seen as an
@@ -157,6 +174,7 @@ update). 2.1.1 contains the same changes with the right version number.
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[2.1.2]: https://github.com/Yalaouf/gallery-android/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/Yalaouf/gallery-android/compare/v2.0...v2.1.1
 [2.0]: https://github.com/Yalaouf/gallery-android/compare/v1.5...v2.0
 [1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.4...v1.5

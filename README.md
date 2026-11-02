@@ -80,6 +80,8 @@ and the only libraries are AndroidX, Media3 and Coil.
 
 - **Remove location when sharing** (optional, in Settings): shared photos are sent as copies without their GPS data.
 - **Locked folder**: hidden items are moved to the app's private storage, where other apps can't see them.
+  They are **hidden, not encrypted**: the fingerprint or screen lock protects access through the app, but someone
+  with full access to the phone (a rooted phone, or a transfer to another phone) could read the files.
   They are excluded from cloud backups (a direct transfer to a new phone keeps them), and they are
   **deleted if you uninstall the app**: unhide them first.
 - "Open in Maps" hands the coordinates to your maps app; Gallery itself never goes online.

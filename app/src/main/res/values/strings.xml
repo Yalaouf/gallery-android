@@ -229,7 +229,7 @@
         <item quantity="one">Move %1$d item to the locked folder?</item>
         <item quantity="other">Move %1$d items to the locked folder?</item>
     </plurals>
-    <string name="lock_text">They will be hidden from the gallery and other apps, and only visible after unlocking with your fingerprint or screen lock. Locked items are deleted if you uninstall the app, and aren\'t included in cloud backups.</string>
+    <string name="lock_text">They will be hidden from the gallery and other apps, and only visible after unlocking with your fingerprint or screen lock. Locked items are deleted if you uninstall the app, and aren\'t included in cloud backups. Files are hidden, not encrypted.</string>
     <plurals name="copied_to">
         <item quantity="one">%1$d item copied to %2$s</item>
         <item quantity="other">%1$d items copied to %2$s</item>
@@ -260,7 +260,7 @@
     <string name="locked_title">Locked folder</string>
     <string name="locked_prompt">Unlock to see your hidden photos and videos</string>
     <string name="locked_empty">Nothing here yet. Select photos or videos and choose "Move to locked folder" in the ⋮ menu to hide them here.</string>
-    <string name="locked_explainer">Photos and videos here are hidden from the gallery and other apps. They stay on this phone only: not in cloud backups, and deleted if you uninstall the app.</string>
+    <string name="locked_explainer">Photos and videos here are hidden from the gallery and other apps. They stay on this phone only: not in cloud backups, and deleted if you uninstall the app. Files are hidden, not encrypted: someone with full access to the phone (rooted phone, transfer to another phone) could still read them.</string>
     <string name="locked_no_screen_lock">Set up a screen lock (PIN, pattern, password or fingerprint) in Android\'s settings to use the locked folder.</string>
     <string name="locked_unlock">Unlock</string>
     <string name="new_album_pick">Choose the photos and videos to add</string>

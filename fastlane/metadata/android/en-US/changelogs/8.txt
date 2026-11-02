@@ -1,0 +1,5 @@
+New in 2.1.1:
+• A video no longer restarts when you take a screenshot; a paused video stays paused
+• Remove location when sharing: a photo whose location can't be removed is no longer shared
+• Locked folder: hidden files stay visible even if its index is damaged
+• Shows the right version number (2.1 showed 2.0)

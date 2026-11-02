@@ -3,7 +3,10 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow the app's `versionName`.
 
-## [Unreleased]
+## [2.1.1] — 2026-11-02
+
+The 2.1 release was published with the version number of 2.0 (it showed "2.0" in Settings and wasn't seen as an
+update). 2.1.1 contains the same changes with the right version number.
 
 ### Fixed
 - **Video restarting after a screenshot**: taking a screenshot (or any new photo arriving) while watching a video
@@ -15,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   from the index are now listed anyway, and the index is rebuilt on the next change.
 
 ### Added
-- Unit tests for the main features (80 tests), run on the computer with Robolectric.
+- Unit tests for the main features (80 tests), run on the computer with Robolectric, on every push.
 
 ## [2.0] — 2026-11-02
 
@@ -154,7 +157,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - English and French, following the system language.
 - No internet permission, no trackers.
 
-[Unreleased]: https://github.com/Yalaouf/gallery-android/compare/v2.0...HEAD
+[2.1.1]: https://github.com/Yalaouf/gallery-android/compare/v2.0...v2.1.1
 [2.0]: https://github.com/Yalaouf/gallery-android/compare/v1.5...v2.0
 [1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.4...v1.5
 [1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.3...v1.4

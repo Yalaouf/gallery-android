@@ -48,6 +48,16 @@ jobs:
           sparse-checkout: CHANGELOG.md
           sparse-checkout-cone-mode: false
 
+      # A tag pushed before bumping the version would publish the previous version under the new name
+      - name: Check that the tag matches the app version
+        run: |
+          VERSION=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "::error::Tag $TAG but versionName is \"$VERSION\" in app/build.gradle.kts: bump versionCode and versionName, then tag again"
+            exit 1
+          fi
+          echo "Version $VERSION"
+
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin

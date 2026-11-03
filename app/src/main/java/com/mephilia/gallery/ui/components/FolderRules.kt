@@ -2,6 +2,7 @@ package com.mephilia.gallery.ui.components
 
 import androidx.annotation.StringRes
 import com.mephilia.gallery.R
+import com.mephilia.gallery.data.Album
 import com.mephilia.gallery.data.MediaItem
 import java.text.Normalizer
 
@@ -36,6 +37,24 @@ internal fun newFolderPath(name: String) = "$NEW_FOLDER_PARENT${name.trim()}/"
 
 /** The display name of a folder from its relative path, e.g. "Pictures/Trips/" → "Trips". */
 internal fun folderName(relativePath: String) = relativePath.trimEnd('/').substringAfterLast('/')
+
+/**
+ * The relative path of the folder at [relativePath] once renamed to [newName], next to the old one
+ * (e.g. "DCIM/Camera/" → "DCIM/Holidays/"), or null if it can't be renamed: top-level folders such as
+ * "Pictures/" are Android's own.
+ */
+internal fun renamedFolderPath(relativePath: String, newName: String): String? {
+    val parent = relativePath.trimEnd('/').substringBeforeLast('/', missingDelimiterValue = "")
+    if (parent.isEmpty()) return null
+    return "$parent/${newName.trim()}/"
+}
+
+/**
+ * Whether a folder at [relativePath] already exists among [albums]. Shared storage ignores case,
+ * so "Trips" and "trips" are the same folder.
+ */
+internal fun isFolderTaken(relativePath: String, albums: List<Album>) =
+    albums.any { it.relativePath.equals(relativePath, ignoreCase = true) }
 
 /**
  * Why [items] can't go to the folder at [relativePath], as a string resource, or null if they can.

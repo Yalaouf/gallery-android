@@ -1,7 +1,7 @@
 package com.mephilia.gallery.ui.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -95,9 +95,10 @@ private fun CoverCard(
     subtitle: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     cover: @Composable BoxScope.() -> Unit,
 ) {
-    Column(modifier.clip(RoundedCornerShape(Dimens.cardCorner)).clickable(onClick = onClick)) {
+    Column(modifier.clip(RoundedCornerShape(Dimens.cardCorner)).combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -136,10 +137,10 @@ private fun CoverImage(item: MediaItem, modifier: Modifier = Modifier, descripti
     )
 }
 
-/** A folder, with its most recent item as cover and its item count. */
+/** A folder, with its most recent item as cover and its item count. [onLongClick] opens the album's actions. */
 @Composable
-internal fun AlbumCard(album: Album, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    CoverCard(album.name, "${album.count}", modifier, onClick) {
+internal fun AlbumCard(album: Album, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+    CoverCard(album.name, "${album.count}", modifier, onClick, onLongClick) {
         CoverImage(album.cover, description = album.name)
     }
 }

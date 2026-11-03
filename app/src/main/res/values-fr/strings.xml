@@ -322,4 +322,15 @@
         <item quantity="many">%1$d photos non partagées : leur lieu n\'a pas pu être retiré</item>
         <item quantity="other">%1$d photos non partagées : leur lieu n\'a pas pu être retiré</item>
     </plurals>
+    <string name="action_rename_album">Renommer l\'album</string>
+    <string name="action_delete_album">Supprimer l\'album</string>
+    <string name="album_name_taken">Un dossier porte déjà ce nom</string>
+    <string name="album_renamed">Album renommé en %s</string>
+    <string name="album_deleted">Album supprimé</string>
+    <string name="delete_album_title">Supprimer « %s » ?</string>
+    <plurals name="delete_album_text">
+        <item quantity="one">Son élément sera mis à la corbeille, où il restera récupérable pendant 30 jours.</item>
+        <item quantity="many">Ses %d éléments seront mis à la corbeille, où ils resteront récupérables pendant 30 jours.</item>
+        <item quantity="other">Ses %d éléments seront mis à la corbeille, où ils resteront récupérables pendant 30 jours.</item>
+    </plurals>
 </resources>

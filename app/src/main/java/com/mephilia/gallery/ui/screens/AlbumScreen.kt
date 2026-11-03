@@ -18,8 +18,10 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Checklist
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,13 +49,18 @@ import com.mephilia.gallery.data.FAVORITES_ID
 import com.mephilia.gallery.data.MediaItem
 import com.mephilia.gallery.data.MediaSort
 import com.mephilia.gallery.data.ON_THIS_DAY_ID
+import com.mephilia.gallery.data.isPseudoAlbum
 import com.mephilia.gallery.ui.GalleryViewModel
+import com.mephilia.gallery.ui.components.AlbumAction
+import com.mephilia.gallery.ui.components.AlbumActionDialog
+import com.mephilia.gallery.ui.components.AlbumMenuEntries
 import com.mephilia.gallery.ui.components.EmptyState
 import com.mephilia.gallery.ui.components.MediaGrid
 import com.mephilia.gallery.ui.components.MediaOptionsSheet
 import com.mephilia.gallery.ui.components.SelectionActionsBar
 import com.mephilia.gallery.ui.components.SelectionTopBar
 import com.mephilia.gallery.ui.components.ThemedSystemBars
+import com.mephilia.gallery.ui.components.canRenameFolder
 import com.mephilia.gallery.ui.components.rememberSelection
 import com.mephilia.gallery.ui.theme.Dimens
 
@@ -61,7 +68,8 @@ import com.mephilia.gallery.ui.theme.Dimens
  * A folder, or a pseudo album (favorites, on this day, all photos, all videos), with selection mode.
  *
  * Folders follow the chosen sort and filter, which can be changed here. Favorites and on this day keep their own
- * order (newest first), so they offer no sort options and are always grouped by day.
+ * order (newest first), so they offer no sort options and are always grouped by day. A real folder's menu offers
+ * to rename or delete it, acting on all its items whatever the filter shows; the screen closes once it's done.
  *
  * @param bucketId the folder's id, or a pseudo album's (such as [FAVORITES_ID]).
  * @param name the title shown.
@@ -86,6 +94,13 @@ fun AlbumScreen(
     val scroll = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val gridState = rememberLazyGridState()
     val ownOrder = bucketId == FAVORITES_ID || bucketId == ON_THIS_DAY_ID
+    val allItems by vm.allItems.collectAsStateWithLifecycle()
+    val folderItems = remember(allItems, bucketId) {
+        if (isPseudoAlbum(bucketId)) emptyList() else allItems.filter { it.bucketId == bucketId }
+    }
+    val relativePath = folderItems.firstOrNull()?.relativePath
+    var menu by remember { mutableStateOf(false) }
+    var albumAction by remember { mutableStateOf<AlbumAction?>(null) }
     ThemedSystemBars()
 
     Scaffold(
@@ -114,6 +129,15 @@ fun AlbumScreen(
                     }
                     if (!ownOrder) {
                         IconButton(onClick = { showOptions = true }) { Icon(Icons.Rounded.Tune, stringResource(R.string.action_sort_filter)) }
+                    }
+                    if (relativePath != null) Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.action_more)) }
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            AlbumMenuEntries(canRenameFolder(relativePath)) {
+                                menu = false
+                                albumAction = it
+                            }
+                        }
                     }
                 },
                 scrollBehavior = scroll,
@@ -151,6 +175,22 @@ fun AlbumScreen(
                 )
             }
         }
+    }
+
+    val action = albumAction
+    if (action != null && relativePath != null) {
+        AlbumActionDialog(
+            action = action,
+            name = name,
+            relativePath = relativePath,
+            items = folderItems,
+            albums = albums,
+            onDismiss = { albumAction = null },
+            onDone = {
+                albumAction = null
+                onBack()
+            },
+        )
     }
 
     if (showOptions) {

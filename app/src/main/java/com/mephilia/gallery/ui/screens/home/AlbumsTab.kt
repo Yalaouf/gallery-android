@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,14 +36,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mephilia.gallery.R
 import com.mephilia.gallery.data.Album
 import com.mephilia.gallery.ui.GalleryViewModel
+import com.mephilia.gallery.ui.components.AlbumAction
+import com.mephilia.gallery.ui.components.AlbumActionDialog
+import com.mephilia.gallery.ui.components.AlbumMenuEntries
 import com.mephilia.gallery.ui.components.AlbumOptionsSheet
 import com.mephilia.gallery.ui.components.EmptyState
+import com.mephilia.gallery.ui.components.canRenameFolder
 import com.mephilia.gallery.ui.components.normalizeForSearch
 import com.mephilia.gallery.ui.components.snappyItemModifier
 import kotlinx.coroutines.flow.Flow
 
 /**
  * The albums tab: every folder holding photos or videos, with search, sort and album creation.
+ * A long-press on an album offers to rename or delete it.
  *
  * @param onNewAlbum starts creating an album with the given name.
  * @param scrollToTop emits when the grid should go back to the top.
@@ -67,6 +73,9 @@ internal fun AlbumsTab(
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val gridState = rememberLazyGridState()
     val shown = remember(albums, query) { filterAlbums(albums, query) }
+    val allItems by vm.allItems.collectAsStateWithLifecycle()
+    var menuAlbum by remember { mutableStateOf<Album?>(null) }
+    var albumAction by remember { mutableStateOf<Pair<Album, AlbumAction>?>(null) }
 
     fun closeSearch() {
         searching = false
@@ -112,11 +121,32 @@ internal fun AlbumsTab(
                 shown.isEmpty() -> EmptyState(Icons.Rounded.Search, stringResource(R.string.no_album_match, query.trim()))
                 else -> CardGrid(state = gridState) {
                     items(shown, key = { it.id }) { album ->
-                        AlbumCard(album, snappyItemModifier()) { onOpen(album) }
+                        Box(snappyItemModifier()) {
+                            AlbumCard(album, onLongClick = { menuAlbum = album }) { onOpen(album) }
+                            DropdownMenu(expanded = menuAlbum == album, onDismissRequest = { menuAlbum = null }) {
+                                AlbumMenuEntries(canRenameFolder(album.relativePath)) {
+                                    menuAlbum = null
+                                    albumAction = album to it
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    albumAction?.let { (album, action) ->
+        val folderItems = remember(allItems, album.id) { allItems.filter { it.bucketId == album.id } }
+        AlbumActionDialog(
+            action = action,
+            name = album.name,
+            relativePath = album.relativePath,
+            items = folderItems,
+            albums = albums,
+            onDismiss = { albumAction = null },
+            onDone = { albumAction = null },
+        )
     }
 
     if (showNewAlbum) {

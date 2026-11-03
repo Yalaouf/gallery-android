@@ -305,4 +305,14 @@
         <item quantity="one">%1$d photo wasn\'t shared: its location couldn\'t be removed</item>
         <item quantity="other">%1$d photos weren\'t shared: their location couldn\'t be removed</item>
     </plurals>
+    <string name="action_rename_album">Rename album</string>
+    <string name="action_delete_album">Delete album</string>
+    <string name="album_name_taken">A folder with this name already exists</string>
+    <string name="album_renamed">Album renamed to %s</string>
+    <string name="album_deleted">Album deleted</string>
+    <string name="delete_album_title">Delete “%s”?</string>
+    <plurals name="delete_album_text">
+        <item quantity="one">Its item will be moved to the trash, where it can be recovered for 30 days.</item>
+        <item quantity="other">Its %d items will be moved to the trash, where they can be recovered for 30 days.</item>
+    </plurals>
 </resources>

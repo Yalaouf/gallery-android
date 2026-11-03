@@ -2,7 +2,10 @@ package com.mephilia.gallery.ui
 
 import com.mephilia.gallery.R
 import com.mephilia.gallery.media
+import com.mephilia.gallery.ui.components.isFolderTaken
 import com.mephilia.gallery.ui.components.isValidFolderName
+import com.mephilia.gallery.ui.components.renamedFolderPath
+import com.mephilia.gallery.data.Album
 import com.mephilia.gallery.ui.components.normalizeForSearch
 import com.mephilia.gallery.ui.components.formatDuration
 import com.mephilia.gallery.ui.components.refusalReason
@@ -58,5 +61,22 @@ class FolderRulesTest {
         assertEquals("0:05", formatDuration(5_400))
         assertEquals("12:34", formatDuration((12 * 60 + 34) * 1000L))
         assertEquals("1:02:03", formatDuration((3600 + 2 * 60 + 3) * 1000L))
+    }
+
+    @Test
+    fun renamedFolderStaysNextToTheOldOne() {
+        assertEquals("DCIM/Holidays/", renamedFolderPath("DCIM/Camera/", "Holidays"))
+        assertEquals("Pictures/Trips 2026/", renamedFolderPath("Pictures/Trips/", "  Trips 2026 "))
+        assertEquals("Pictures/A/C/", renamedFolderPath("Pictures/A/B/", "C"))
+        // Top-level folders are Android's own
+        assertNull(renamedFolderPath("Pictures/", "Other"))
+    }
+
+    @Test
+    fun folderNamesIgnoreCaseWhenCheckingIfTaken() {
+        val albums = listOf(Album(1, "Trips", "Pictures/Trips/", photo, 1, 0, 0))
+        assertTrue(isFolderTaken("Pictures/trips/", albums))
+        assertFalse(isFolderTaken("Pictures/Trips 2/", albums))
+        assertFalse(isFolderTaken("DCIM/Trips/", albums))
     }
 }

@@ -14,3 +14,6 @@ const val PHOTOS_ID = Long.MIN_VALUE + 3
 
 /** Album id of all the videos. */
 const val VIDEOS_ID = Long.MIN_VALUE + 4
+
+/** Whether [id] is one of the pseudo albums above rather than a real folder. */
+fun isPseudoAlbum(id: Long) = id in setOf(LOCKED_ID, FAVORITES_ID, ON_THIS_DAY_ID, PHOTOS_ID, VIDEOS_ID)

@@ -71,7 +71,7 @@ An F-Droid release is planned.
 - Light or dark app icon, or automatic (follows the system theme on launchers that support it)
 - English and French, following the system language (or the per-app language on Android 13+)
 
-See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version. What comes next is planned in the [milestones](https://github.com/Yalaouf/gallery-android/milestones).
 
 ## Privacy
 

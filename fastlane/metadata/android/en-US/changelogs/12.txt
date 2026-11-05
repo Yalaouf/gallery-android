@@ -1,0 +1,6 @@
+New in 1.1.6:
+• Pin albums to the top, and hide folders from Photos
+• Rename and delete albums
+• Edit the date taken of photos and videos
+• Remove the location from photos
+• Editing a screenshot from its preview no longer closes the app

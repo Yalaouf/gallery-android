@@ -3,7 +3,7 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <b>Parcourir</b>
 <ul>
 <li><b>Photos</b> : tout est regroupé par jour. Triez par date, nom, taille ou au hasard, affichez seulement les photos ou les vidéos, choisissez de 2 à 6 colonnes.</li>
-<li><b>Albums</b> : vos dossiers, triés par date de modification, date de création ou nom, avec recherche.</li>
+<li><b>Albums</b> : vos dossiers, triés par date de modification, date de création ou nom, avec recherche. Épinglez des albums en haut, masquez des dossiers dans Photos, renommez-les ou supprimez-les.</li>
 <li><b>Collections</b> : Ce jour-là (les photos prises à la même date les années précédentes), Favoris, toutes les Photos, toutes les Vidéos, Corbeille et Dossier verrouillé.</li>
 <li>Défilement rapide : faites glisser la barre de défilement pour aller à n'importe quel mois.</li>
 <li>Visionneuse plein écran avec zoom (pincer ou double-tap), lecteur vidéo, diaporama et informations détaillées (appareil, exposition, lieu). Glissez vers le haut ou le bas pour fermer.</li>
@@ -14,6 +14,7 @@ Une galerie rapide et privée pour vos photos et vidéos, avec les outils de ret
 <li>Appui long puis glissement pour sélectionner beaucoup d'éléments d'un coup. La grille défile toute seule quand on atteint le bord.</li>
 <li>Sélectionnez une journée entière, ou tout, en un geste.</li>
 <li>Ajoutez aux favoris, déplacez ou copiez vers un autre dossier ou un nouvel album (avec recherche de dossier), renommez, partagez, ou mettez à la corbeille, d'où ils peuvent être restaurés pendant 30 jours.</li>
+<li>Modifiez la date de prise de vue d'un élément ou d'une sélection, et retirez le lieu des photos originales.</li>
 <li><b>Dossier verrouillé</b> : masquez des photos et vidéos de la galerie et des autres applications, derrière votre empreinte ou votre verrouillage d'écran.</li>
 <li>Définissez une photo comme fond d'écran ou photo de contact.</li>
 </ul>

@@ -7,6 +7,23 @@ Versions were renumbered on 2026-11-02 to grow more slowly: 1.0 to 1.5 became 1.
 1.1.0 to 1.1.4. The APKs of those versions still show their old number in Settings; from 1.1.5 on, the number shown
 matches.
 
+## [1.1.6] — 2026-11-05
+
+### Added
+- **Pinned albums**: long-press an album (or use its menu) to pin it to the top of Albums, in the order pinned.
+- **Albums hidden from Photos**: a folder (WhatsApp, screenshots…) can be left out of the Photos tab, "On this day"
+  and the Photos and Videos collections. It stays in Albums, marked with an icon.
+- **Rename an album** and **delete an album** (its items go to the trash), from the album's menu.
+- **Edit the date taken** of a photo or video, from the viewer or for a selection: shift them all by the same amount,
+  or set them all to one date. The date is written into the file (EXIF with its timezone for photos, the movie header
+  for MP4, MOV and 3GP videos), so other apps show the same date.
+- **Remove the location** from the original file of JPEG, PNG and WebP photos, from the viewer or for a selection.
+
+### Fixed
+- **Screenshot editing**: editing a screenshot from the system's screenshot preview and saving it closed the app; it
+  now goes back to where you were.
+- Files opened from another app now show their new name or date after being renamed or edited.
+
 ## [1.1.5] — 2026-11-02
 
 ### Changed
@@ -201,6 +218,7 @@ The 1.1.1 release was published with the version number of 1.1.0 inside the app,
 - English and French, following the system language.
 - No internet permission, no trackers.
 
+[1.1.6]: https://github.com/Yalaouf/gallery-android/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/Yalaouf/gallery-android/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/Yalaouf/gallery-android/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/Yalaouf/gallery-android/compare/v1.1.2...v1.1.3

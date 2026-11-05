@@ -1,0 +1,6 @@
+Nouveautés de la 1.1.6 :
+• Épinglez des albums en haut, et masquez des dossiers dans Photos
+• Renommez et supprimez des albums
+• Modifiez la date de prise de vue des photos et vidéos
+• Retirez le lieu des photos
+• Modifier une capture d'écran depuis son aperçu ne ferme plus l'appli

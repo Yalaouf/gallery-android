@@ -3,7 +3,7 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <b>Browse</b>
 <ul>
 <li><b>Photos</b>: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns.</li>
-<li><b>Albums</b>: your folders, sorted by date modified, date created or name, with search.</li>
+<li><b>Albums</b>: your folders, sorted by date modified, date created or name, with search. Pin albums to the top, hide folders from Photos, rename or delete them.</li>
 <li><b>Collections</b>: On this day (photos taken on today's date in previous years), Favorites, all Photos, all Videos, Trash and the Locked folder.</li>
 <li>Fast scroller: drag the scrollbar to jump to any month.</li>
 <li>Full-screen viewer with pinch and double-tap zoom, a video player, a slideshow and detailed info (camera, exposure, location). Swipe up or down to close.</li>
@@ -14,6 +14,7 @@ A fast, private gallery for your photos and videos, with the editing tools you a
 <li>Long-press then drag to select many items at once. The grid scrolls by itself when you reach the edge.</li>
 <li>Select a whole day, or everything, in one tap.</li>
 <li>Favorite, move or copy items to another folder or to a new album (with folder search), rename, share, or send them to the trash, where they can be restored for 30 days.</li>
+<li>Edit the date taken of one item or a selection, and remove the location from the original photos.</li>
 <li><b>Locked folder</b>: hide photos and videos from the gallery and other apps, behind your fingerprint or screen lock.</li>
 <li>Set a photo as wallpaper or contact picture.</li>
 </ul>

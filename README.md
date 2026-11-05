@@ -38,7 +38,8 @@ An F-Droid release is planned.
 
 **Browse**
 - **Photos**: everything grouped by day. Sort by date, name, size or randomly, show only photos or videos, choose 2 to 6 columns
-- **Albums**: your folders, sorted by date modified, date created or name, with a search bar
+- **Albums**: your folders, sorted by date modified, date created or name, with a search bar. Pin your favorite
+  albums to the top, and hide noisy folders (WhatsApp, screenshots…) from Photos
 - **Collections**: **On this day** (photos taken on today's date in previous years, also shown at the top of Photos),
   **Favorites**, all **Photos**, all **Videos**, the **trash** and the **locked folder**
 - **Fast scroller**: drag the scrollbar to jump to any month
@@ -49,7 +50,10 @@ An F-Droid release is planned.
 **Organize**
 - Long-press and drag to select many items; the grid scrolls by itself at the edges. Select a whole day or everything
 - **Favorite**, **move** or **copy** items to another folder or a new one, with folder search and an A → Z / recent sort
-- **Create albums** (pick the photos to move or copy into them) and **rename** files
+- **Create**, **rename** and **delete albums**, and **rename** files
+- **Edit the date taken** of one item or a whole selection (shift them all, or set one date), written into the file
+  so other apps agree
+- **Remove the location** from the original photo, not only from shared copies
 - **Locked folder**: hide photos and videos from the gallery and from other apps, behind your fingerprint or screen lock
 - **Set as** wallpaper or contact picture
 - **Share** and **delete**; deleted items go to the **trash**, where they can be restored for 30 days or deleted for good

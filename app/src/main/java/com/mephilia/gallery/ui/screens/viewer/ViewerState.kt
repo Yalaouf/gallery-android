@@ -50,6 +50,12 @@ internal enum class ViewerDialog {
     /** Confirm moving the item to the trash. */
     ConfirmTrash,
 
+    /** Change the capture date. */
+    EditDate,
+
+    /** Confirm removing the location from the file. */
+    RemoveLocation,
+
     /** Confirm hiding the item in the locked folder. */
     ConfirmLock,
 

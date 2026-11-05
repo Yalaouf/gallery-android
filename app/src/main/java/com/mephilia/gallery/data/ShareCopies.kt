@@ -35,24 +35,6 @@ private const val JPEG_EXTENSION = "jpg"
  * Videos are shared as they are.
  */
 object ShareCopies {
-    /** Every EXIF tag that can hold a location, including XMP metadata, which can repeat it. */
-    private val LOCATION_TAGS = listOf(
-        ExifInterface.TAG_GPS_LATITUDE, ExifInterface.TAG_GPS_LATITUDE_REF,
-        ExifInterface.TAG_GPS_LONGITUDE, ExifInterface.TAG_GPS_LONGITUDE_REF,
-        ExifInterface.TAG_GPS_ALTITUDE, ExifInterface.TAG_GPS_ALTITUDE_REF,
-        ExifInterface.TAG_GPS_TIMESTAMP, ExifInterface.TAG_GPS_DATESTAMP,
-        ExifInterface.TAG_GPS_PROCESSING_METHOD, ExifInterface.TAG_GPS_AREA_INFORMATION,
-        ExifInterface.TAG_GPS_SPEED, ExifInterface.TAG_GPS_SPEED_REF, ExifInterface.TAG_GPS_TRACK,
-        ExifInterface.TAG_GPS_TRACK_REF, ExifInterface.TAG_GPS_IMG_DIRECTION, ExifInterface.TAG_GPS_IMG_DIRECTION_REF,
-        ExifInterface.TAG_GPS_DEST_LATITUDE, ExifInterface.TAG_GPS_DEST_LATITUDE_REF,
-        ExifInterface.TAG_GPS_DEST_LONGITUDE, ExifInterface.TAG_GPS_DEST_LONGITUDE_REF,
-        ExifInterface.TAG_GPS_VERSION_ID, ExifInterface.TAG_GPS_MAP_DATUM,
-        ExifInterface.TAG_XMP,
-    )
-
-    /** Types whose metadata can be edited in place. */
-    private val EDITABLE_MIMES = setOf("image/jpeg", "image/jpg", "image/png", "image/webp")
-
     /**
      * The URIs to share, in the same order as [items]. A photo that couldn't be cleaned gives null: it must not
      * be shared, since the original still has its location. Copies older than an hour are removed first.
@@ -69,7 +51,7 @@ object ShareCopies {
 
     /** Writes a copy of [item] without its location in [dir], and returns a URI other apps can read it from. */
     internal fun stripped(context: Context, item: MediaItem, dir: File): Uri {
-        val out = if (item.mimeType.lowercase() in EDITABLE_MIMES) {
+        val out = if (item.mimeType.lowercase() in ExifFields.WRITABLE_MIMES) {
             File(dir, item.name.ifBlank { DEFAULT_NAME }).also { copyWithoutLocation(context, item, it) }
         } else {
             File(dir, item.name.substringBeforeLast('.', item.name) + ".$JPEG_EXTENSION").also { convertToJpeg(context, item, it) }
@@ -81,7 +63,7 @@ object ShareCopies {
     private fun copyWithoutLocation(context: Context, item: MediaItem, out: File) {
         checkNotNull(context.contentResolver.openInputStream(item.uri)).use { input -> out.outputStream().use { input.copyTo(it) } }
         val exif = ExifInterface(out)
-        LOCATION_TAGS.forEach { exif.setAttribute(it, null) }
+        ExifFields.LOCATION_TAGS.forEach { exif.setAttribute(it, null) }
         exif.saveAttributes()
     }
 

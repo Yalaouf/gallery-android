@@ -12,10 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.DriveFileRenameOutline
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FileCopy
+import androidx.compose.material.icons.rounded.LocationOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Slideshow
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.mephilia.gallery.R
 import com.mephilia.gallery.data.MediaItem
+import com.mephilia.gallery.data.MetadataWriter
 import com.mephilia.gallery.ui.theme.Spacing
 import java.text.DateFormat
 import java.util.Date
@@ -66,7 +69,7 @@ internal fun isGalleryFile(item: MediaItem) = item.uri.authority == MediaStore.A
  *
  * @param canSlideshow whether there is more than one item, so a slideshow makes sense.
  * @param onSetAs offers the item as wallpaper or contact picture.
- * @param onShowDialog opens one of the viewer's dialogs (copy, rename, lock).
+ * @param onShowDialog opens one of the viewer's dialogs (copy, rename, edit date, remove location, lock).
  */
 @Composable
 internal fun ViewerTopBar(
@@ -131,7 +134,10 @@ internal fun ViewerTopBar(
     }
 }
 
-/** The "more" button and its menu: slideshow, set as, copy, rename and hide in the locked folder. */
+/**
+ * The "more" button and its menu: slideshow, set as, copy, rename, edit the date, remove the location and hide in
+ * the locked folder. Editing the date and removing the location only show for the file types that support them.
+ */
 @Composable
 private fun MoreMenu(
     item: MediaItem,
@@ -164,6 +170,12 @@ private fun MoreMenu(
             if (inGallery && isGalleryFile(item)) {
                 Entry(Icons.Rounded.FileCopy, R.string.action_copy_to) { onShowDialog(ViewerDialog.Copy) }
                 Entry(Icons.Rounded.DriveFileRenameOutline, R.string.action_rename) { onShowDialog(ViewerDialog.Rename) }
+                if (MetadataWriter.canEditDate(item)) {
+                    Entry(Icons.Rounded.CalendarMonth, R.string.action_edit_date) { onShowDialog(ViewerDialog.EditDate) }
+                }
+                if (MetadataWriter.canRemoveLocation(item)) {
+                    Entry(Icons.Rounded.LocationOff, R.string.action_remove_location) { onShowDialog(ViewerDialog.RemoveLocation) }
+                }
                 Entry(Icons.Rounded.Lock, R.string.action_move_to_locked) { onShowDialog(ViewerDialog.ConfirmLock) }
             }
         }

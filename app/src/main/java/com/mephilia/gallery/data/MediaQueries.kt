@@ -64,6 +64,16 @@ object MediaQueries {
     fun withoutExcluded(items: List<MediaItem>, excluded: Set<String>): List<MediaItem> =
         if (excluded.isEmpty()) items else items.filter { it.relativePath !in excluded }
 
+    /**
+     * The new capture date of each of [items], by id, when the oldest one is set to [newDate]. With [keepGaps], the
+     * others move by the same amount, keeping the time between them; otherwise they all get [newDate].
+     */
+    fun newDates(items: List<MediaItem>, newDate: Long, keepGaps: Boolean): Map<Long, Long> {
+        val oldest = items.minOfOrNull { it.dateTaken } ?: return emptyMap()
+        val shift = newDate - oldest
+        return items.associate { it.id to if (keepGaps) it.dateTaken + shift else newDate }
+    }
+
     /** The [items] taken on [today]'s month and day in previous years, newest first. */
     fun onThisDay(items: List<MediaItem>, today: LocalDate, zone: ZoneId): List<MediaItem> =
         items.filter {

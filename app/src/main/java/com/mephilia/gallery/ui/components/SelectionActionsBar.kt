@@ -3,11 +3,13 @@ package com.mephilia.gallery.ui.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DriveFileMove
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FileCopy
+import androidx.compose.material.icons.rounded.LocationOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.SelectAll
@@ -36,10 +38,11 @@ import com.mephilia.gallery.data.Album
 import com.mephilia.gallery.data.AppSettings
 import com.mephilia.gallery.data.MediaEvents
 import com.mephilia.gallery.data.MediaItem
+import com.mephilia.gallery.data.MetadataWriter
 import kotlinx.coroutines.launch
 
 /** The dialogs and sheets the selection actions bar can open; only one is shown at a time. */
-private enum class SelectionDialog { Move, Copy, ConfirmTrash, ConfirmLock }
+private enum class SelectionDialog { Move, Copy, EditDate, RemoveLocation, ConfirmTrash, ConfirmLock }
 
 /** A small top bar for selection mode: close, the number of selected items, and select all. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,7 +61,8 @@ fun SelectionTopBar(count: Int, onClose: () -> Unit, onSelectAll: () -> Unit) {
 
 /**
  * The floating bar of actions for the selected [items]: favorite, move, share, delete, and a menu with select all,
- * copy and hide in the locked folder. [onDone] is called once an action is completed, to leave selection mode.
+ * copy, edit the date, remove the location and hide in the locked folder. [onDone] is called once an action is
+ * completed, to leave selection mode.
  *
  * @param albums the folders offered as destinations when moving or copying.
  */
@@ -102,6 +106,18 @@ fun SelectionActionsBar(
                     menu = false
                     dialog = SelectionDialog.Copy
                 }
+                if (items.any(MetadataWriter::canEditDate)) {
+                    MenuEntry(Icons.Rounded.CalendarMonth, R.string.action_edit_date) {
+                        menu = false
+                        dialog = SelectionDialog.EditDate
+                    }
+                }
+                if (items.any(MetadataWriter::canRemoveLocation)) {
+                    MenuEntry(Icons.Rounded.LocationOff, R.string.action_remove_location) {
+                        menu = false
+                        dialog = SelectionDialog.RemoveLocation
+                    }
+                }
                 MenuEntry(Icons.Rounded.Lock, R.string.action_move_to_locked) {
                     menu = false
                     dialog = SelectionDialog.ConfirmLock
@@ -117,6 +133,8 @@ fun SelectionActionsBar(
     when (dialog) {
         SelectionDialog.Move -> MoveFlow(items, albums, onDismiss = close, onMoved = finished)
         SelectionDialog.Copy -> MoveFlow(items, albums, onDismiss = close, onMoved = finished, copy = true)
+        SelectionDialog.EditDate -> EditDateDialog(items, onDismiss = close, onDone = finished)
+        SelectionDialog.RemoveLocation -> RemoveLocationDialog(items, onDismiss = close, onDone = finished)
         SelectionDialog.ConfirmLock -> ConfirmLockDialog(items.size, onDismiss = close) {
             close()
             scope.launch { if (moveToLocked(context, access, items)) onDone() }

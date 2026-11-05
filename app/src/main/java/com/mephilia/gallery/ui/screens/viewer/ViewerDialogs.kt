@@ -25,8 +25,10 @@ import com.mephilia.gallery.ui.components.AccessDeniedException
 import com.mephilia.gallery.ui.components.ConfirmDeleteLockedDialog
 import com.mephilia.gallery.ui.components.ConfirmLockDialog
 import com.mephilia.gallery.ui.components.ConfirmTrashDialog
+import com.mephilia.gallery.ui.components.EditDateDialog
 import com.mephilia.gallery.ui.components.MediaAccess
 import com.mephilia.gallery.ui.components.MoveFlow
+import com.mephilia.gallery.ui.components.RemoveLocationDialog
 import com.mephilia.gallery.ui.components.deleteLocked
 import com.mephilia.gallery.ui.components.isValidFolderName
 import com.mephilia.gallery.ui.components.moveToLocked
@@ -65,6 +67,8 @@ internal fun ViewerDialogHost(
         ViewerDialog.Move -> MoveFlow(items, albums, onDismiss = onDismiss, onMoved = onDismiss)
         ViewerDialog.Copy -> MoveFlow(items, albums, onDismiss = onDismiss, onMoved = onDismiss, copy = true)
         ViewerDialog.Rename -> RenameDialog(item, access, onDismiss)
+        ViewerDialog.EditDate -> EditDateDialog(items, onDismiss, onDone = onDismiss)
+        ViewerDialog.RemoveLocation -> RemoveLocationDialog(items, onDismiss, onDone = onDismiss)
         ViewerDialog.ConfirmTrash -> ConfirmTrashDialog(SINGLE_ITEM, onDismiss = onDismiss) {
             confirmed { trashItem(access, item) }
         }

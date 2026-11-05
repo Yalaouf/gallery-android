@@ -321,4 +321,29 @@
     <string name="action_show_in_photos">Show in Photos</string>
     <string name="album_pinned">Pinned</string>
     <string name="album_hidden_from_photos">Hidden from Photos</string>
+    <string name="action_edit_date">Edit date</string>
+    <string name="action_remove_location">Remove location</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_remove">Remove</string>
+    <string name="edit_date_title">Date taken</string>
+    <string name="edit_date_keep_gaps">Keep the time between them</string>
+    <string name="edit_date_keep_gaps_on">The oldest one gets this date, the others move by the same amount</string>
+    <string name="edit_date_keep_gaps_off">They all get this date</string>
+    <plurals name="date_changed">
+        <item quantity="one">Date changed</item>
+        <item quantity="other">Date changed for %d items</item>
+    </plurals>
+    <plurals name="remove_location_title">
+        <item quantity="one">Remove the location?</item>
+        <item quantity="other">Remove the location from %d items?</item>
+    </plurals>
+    <string name="remove_location_text">The GPS position is deleted from the file itself. This can\'t be undone.</string>
+    <plurals name="location_removed">
+        <item quantity="one">Location removed</item>
+        <item quantity="other">Location removed from %d items</item>
+    </plurals>
+    <plurals name="metadata_failed">
+        <item quantity="one">%d item couldn\'t be changed: its file type isn\'t supported</item>
+        <item quantity="other">%d items couldn\'t be changed: their file type isn\'t supported</item>
+    </plurals>
 </resources>

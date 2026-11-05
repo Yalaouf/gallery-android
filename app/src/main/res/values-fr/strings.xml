@@ -339,4 +339,33 @@
     <string name="action_show_in_photos">Afficher dans Photos</string>
     <string name="album_pinned">Épinglé</string>
     <string name="album_hidden_from_photos">Masqué de Photos</string>
+    <string name="action_edit_date">Modifier la date</string>
+    <string name="action_remove_location">Retirer le lieu</string>
+    <string name="action_apply">Appliquer</string>
+    <string name="action_remove">Retirer</string>
+    <string name="edit_date_title">Date de prise de vue</string>
+    <string name="edit_date_keep_gaps">Garder l\'écart entre eux</string>
+    <string name="edit_date_keep_gaps_on">Le plus ancien prend cette date, les autres sont décalés d\'autant</string>
+    <string name="edit_date_keep_gaps_off">Ils prennent tous cette date</string>
+    <plurals name="date_changed">
+        <item quantity="one">Date modifiée</item>
+        <item quantity="many">Date modifiée pour %d éléments</item>
+        <item quantity="other">Date modifiée pour %d éléments</item>
+    </plurals>
+    <plurals name="remove_location_title">
+        <item quantity="one">Retirer le lieu ?</item>
+        <item quantity="many">Retirer le lieu de %d éléments ?</item>
+        <item quantity="other">Retirer le lieu de %d éléments ?</item>
+    </plurals>
+    <string name="remove_location_text">La position GPS est supprimée du fichier lui-même. Cette action est irréversible.</string>
+    <plurals name="location_removed">
+        <item quantity="one">Lieu retiré</item>
+        <item quantity="many">Lieu retiré de %d éléments</item>
+        <item quantity="other">Lieu retiré de %d éléments</item>
+    </plurals>
+    <plurals name="metadata_failed">
+        <item quantity="one">%d élément n\'a pas pu être modifié : son type de fichier n\'est pas pris en charge</item>
+        <item quantity="many">%d éléments n\'ont pas pu être modifiés : leur type de fichier n\'est pas pris en charge</item>
+        <item quantity="other">%d éléments n\'ont pas pu être modifiés : leur type de fichier n\'est pas pris en charge</item>
+    </plurals>
 </resources>

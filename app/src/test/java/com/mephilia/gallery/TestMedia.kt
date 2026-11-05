@@ -18,8 +18,9 @@ fun media(
     modified: Long = taken,
     favorite: Boolean = false,
     uri: Uri = Uri.parse("content://media/external/images/media/$id"),
+    mime: String = if (video) "video/mp4" else "image/jpeg",
 ) = MediaItem(
-    id = id, uri = uri, isVideo = video, name = name, mimeType = if (video) "video/mp4" else "image/jpeg",
+    id = id, uri = uri, isVideo = video, name = name, mimeType = mime,
     dateTaken = taken, dateModified = modified, size = size, width = 100, height = 100, durationMs = 0,
     bucketId = bucket, bucketName = bucketName, relativePath = path, favorite = favorite,
 )

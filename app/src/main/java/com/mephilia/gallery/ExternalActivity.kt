@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mephilia.gallery.data.MediaEvents
 import com.mephilia.gallery.data.MediaItem
 import com.mephilia.gallery.data.MediaRepository
 import com.mephilia.gallery.ui.Route
@@ -31,6 +32,7 @@ import com.mephilia.gallery.ui.editor.PhotoEditorScreen
 import com.mephilia.gallery.ui.editor.VideoEditorScreen
 import com.mephilia.gallery.ui.screens.viewer.ViewerScreen
 import com.mephilia.gallery.ui.theme.GalleryTheme
+import kotlinx.coroutines.flow.filter
 
 /**
  * Entry point for other apps: "Edit with" (ACTION_EDIT), "Open with" (ACTION_VIEW), and
@@ -65,6 +67,7 @@ class ExternalActivity : ComponentActivity() {
 /**
  * The file at [uri], in the editor if [editMode], otherwise in the viewer (whose edit button opens the editor).
  * Closes the activity ([onFinish]) if the file can't be read, or when the editor opened directly is closed.
+ * The file is read again when it changes (renamed, date edited…), so the viewer shows its new details.
  *
  * @param type the MIME type given by the calling app, if any.
  */
@@ -72,8 +75,12 @@ class ExternalActivity : ComponentActivity() {
 private fun ExternalRoot(uri: Uri, type: String?, editMode: Boolean, onFinish: () -> Unit) {
     val context = LocalContext.current
     val item by produceState<MediaItem?>(null, uri) {
-        value = MediaRepository(context).resolve(uri, type)
+        val repository = MediaRepository(context)
+        value = repository.resolve(uri, type)
         if (value == null) onFinish()
+        MediaEvents.events
+            .filter { it is MediaEvents.Event.Changed || it is MediaEvents.Event.Replaced }
+            .collect { repository.resolve(uri, type)?.let { value = it } }
     }
     val media = item ?: return Box(Modifier.fillMaxSize().background(Color.Black))
     var editing by rememberSaveable { mutableStateOf(editMode) }

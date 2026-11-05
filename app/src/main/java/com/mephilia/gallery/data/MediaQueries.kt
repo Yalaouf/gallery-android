@@ -48,6 +48,22 @@ object MediaQueries {
         return if (descending != (sort == AlbumSort.Name)) sorted.reversed() else sorted
     }
 
+    /**
+     * The [albums] with the pinned ones first, in the order of [pinned] (relative paths, in the order they were
+     * pinned), then the others in their current order. Pinned paths without an album are ignored.
+     */
+    fun pinFirst(albums: List<Album>, pinned: List<String>): List<Album> {
+        if (pinned.isEmpty()) return albums
+        val byPath = albums.associateBy { it.relativePath }
+        val first = pinned.mapNotNull { byPath[it] }
+        val pinnedSet = pinned.toSet()
+        return first + albums.filter { it.relativePath !in pinnedSet }
+    }
+
+    /** The [items] outside the [excluded] folders (relative paths). */
+    fun withoutExcluded(items: List<MediaItem>, excluded: Set<String>): List<MediaItem> =
+        if (excluded.isEmpty()) items else items.filter { it.relativePath !in excluded }
+
     /** The [items] taken on [today]'s month and day in previous years, newest first. */
     fun onThisDay(items: List<MediaItem>, today: LocalDate, zone: ZoneId): List<MediaItem> =
         items.filter {

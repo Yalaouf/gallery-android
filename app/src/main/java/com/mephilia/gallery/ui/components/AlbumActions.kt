@@ -5,6 +5,9 @@ import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DriveFileRenameOutline
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -28,14 +31,37 @@ import com.mephilia.gallery.data.MediaWriter
 import kotlinx.coroutines.launch
 
 /** An action on a whole album, from its screen's menu or a long-press on its card. */
-enum class AlbumAction { Rename, Delete }
+enum class AlbumAction {
+    /** Pin it at the top of the Albums tab, or unpin it. */
+    TogglePin,
+
+    /** Hide its items from the Photos tab and the collections, or show them again. */
+    ToggleExcluded,
+
+    /** Give the folder a new name (asks for it in a dialog). */
+    Rename,
+
+    /** Move every item to the trash (asks first). */
+    Delete,
+}
 
 /**
- * The album actions as menu entries. Renaming is only offered when [canRename]: top-level folders such as
- * "Pictures/" are Android's own (see [renamedFolderPath]).
+ * The album actions as menu entries. The pin and hide entries read according to whether the album is [pinned]
+ * and [excluded]. Renaming is only offered when [canRename]: top-level folders such as "Pictures/" are Android's
+ * own (see [renamedFolderPath]).
  */
 @Composable
-fun AlbumMenuEntries(canRename: Boolean, onAction: (AlbumAction) -> Unit) {
+fun AlbumMenuEntries(canRename: Boolean, pinned: Boolean, excluded: Boolean, onAction: (AlbumAction) -> Unit) {
+    DropdownMenuItem(
+        text = { Text(stringResource(if (pinned) R.string.action_unpin_album else R.string.action_pin_album)) },
+        leadingIcon = { Icon(Icons.Rounded.PushPin, null) },
+        onClick = { onAction(AlbumAction.TogglePin) },
+    )
+    DropdownMenuItem(
+        text = { Text(stringResource(if (excluded) R.string.action_show_in_photos else R.string.action_hide_from_photos)) },
+        leadingIcon = { Icon(if (excluded) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff, null) },
+        onClick = { onAction(AlbumAction.ToggleExcluded) },
+    )
     if (canRename) {
         DropdownMenuItem(
             text = { Text(stringResource(R.string.action_rename_album)) },
@@ -57,13 +83,14 @@ fun canRenameFolder(relativePath: String) = renamedFolderPath(relativePath, newN
 private const val PROBE_NAME = "x"
 
 /**
- * Shows the dialog of [action] for the folder at [relativePath], called [name], and carries out the action on
- * all its [items] (whatever the photos / videos filter shows).
+ * Shows the dialog of [action] ([AlbumAction.Rename] or [AlbumAction.Delete]) for the folder at [relativePath],
+ * called [name], and carries out the action on all its [items] (whatever the photos / videos filter shows).
  *
  * The dialog stays open while the action runs, since Android may ask the user for permission. A message tells
  * how it went.
  *
  * @param albums every folder, to refuse a new name that's already taken.
+ * @param onRenamed the folder now has this new relative path; called before [onDone].
  * @param onDone the folder was renamed or deleted: it no longer exists under its old path.
  */
 @Composable
@@ -74,11 +101,16 @@ fun AlbumActionDialog(
     items: List<MediaItem>,
     albums: List<Album>,
     onDismiss: () -> Unit,
+    onRenamed: (String) -> Unit,
     onDone: () -> Unit,
 ) {
     when (action) {
-        AlbumAction.Rename -> RenameAlbumDialog(name, relativePath, items, albums, onDismiss, onDone)
+        AlbumAction.Rename -> RenameAlbumDialog(name, relativePath, items, albums, onDismiss) { newPath ->
+            onRenamed(newPath)
+            onDone()
+        }
         AlbumAction.Delete -> DeleteAlbumDialog(name, items, onDismiss, onDone)
+        AlbumAction.TogglePin, AlbumAction.ToggleExcluded -> Unit
     }
 }
 
@@ -93,7 +125,7 @@ private fun RenameAlbumDialog(
     items: List<MediaItem>,
     albums: List<Album>,
     onDismiss: () -> Unit,
-    onDone: () -> Unit,
+    onRenamed: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val access = rememberMediaAccess()
@@ -126,7 +158,7 @@ private fun RenameAlbumDialog(
                     val target = newPath ?: return@TextButton
                     working = true
                     scope.launch {
-                        if (renameAlbum(context, access, items, target)) onDone() else working = false
+                        if (renameAlbum(context, access, items, target)) onRenamed(target) else working = false
                     }
                 },
             ) { Text(stringResource(R.string.action_rename)) }

@@ -93,4 +93,24 @@ class MediaQueriesTest {
         assertTrue(MediaQueries.onThisDay(listOf(late), LocalDate.of(2026, 11, 2), zone).isNotEmpty())
         assertTrue(MediaQueries.onThisDay(listOf(late), LocalDate.of(2026, 11, 3), zone).isEmpty())
     }
+
+    @Test
+    fun pinnedAlbumsComeFirstInPinOrder() {
+        val camera = Album(1, "Camera", "DCIM/Camera/", a, 1, 0, 0)
+        val trips = Album(2, "Trips", "Pictures/Trips/", b, 1, 0, 0)
+        val pets = Album(3, "Pets", "Pictures/Pets/", c, 1, 0, 0)
+        val sorted = listOf(camera, trips, pets)
+        assertEquals(sorted, MediaQueries.pinFirst(sorted, emptyList()))
+        assertEquals(listOf(pets, trips, camera), MediaQueries.pinFirst(sorted, listOf("Pictures/Pets/", "Pictures/Trips/")))
+        // A pinned folder that no longer exists is ignored
+        assertEquals(listOf(trips, camera, pets), MediaQueries.pinFirst(sorted, listOf("Pictures/Gone/", "Pictures/Trips/")))
+    }
+
+    @Test
+    fun excludedFoldersAreLeftOut() {
+        val screenshot = media(4, path = "Pictures/Screenshots/")
+        val items = all + screenshot
+        assertEquals(items, MediaQueries.withoutExcluded(items, emptySet()))
+        assertEquals(all, MediaQueries.withoutExcluded(items, setOf("Pictures/Screenshots/")))
+    }
 }

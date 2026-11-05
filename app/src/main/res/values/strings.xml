@@ -315,4 +315,10 @@
         <item quantity="one">Its item will be moved to the trash, where it can be recovered for 30 days.</item>
         <item quantity="other">Its %d items will be moved to the trash, where they can be recovered for 30 days.</item>
     </plurals>
+    <string name="action_pin_album">Pin album</string>
+    <string name="action_unpin_album">Unpin album</string>
+    <string name="action_hide_from_photos">Hide from Photos</string>
+    <string name="action_show_in_photos">Show in Photos</string>
+    <string name="album_pinned">Pinned</string>
+    <string name="album_hidden_from_photos">Hidden from Photos</string>
 </resources>

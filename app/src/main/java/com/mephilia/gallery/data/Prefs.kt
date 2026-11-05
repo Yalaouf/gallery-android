@@ -1,6 +1,7 @@
 package com.mephilia.gallery.data
 
 import android.content.Context
+import org.json.JSONArray
 
 /** Name of the preferences file of the view choices. */
 private const val FILE_NAME = "gallery"
@@ -23,11 +24,17 @@ private const val KEY_MOVE_SORT_RECENT = "move_sort_recent"
 /** Preference key of [Prefs.gridColumns]. */
 private const val KEY_GRID_COLUMNS = "grid_columns"
 
+/** Preference key of [Prefs.pinnedAlbums]. */
+private const val KEY_PINNED_ALBUMS = "pinned_albums"
+
+/** Preference key of [Prefs.excludedAlbums]. */
+private const val KEY_EXCLUDED_ALBUMS = "excluded_albums"
+
 /** Number of columns of the photo grid until the user picks another. */
 const val DEFAULT_GRID_COLUMNS = 4
 
 /**
- * The view choices remembered between launches: sorts, filter and grid size.
+ * The view choices remembered between launches: sorts, filter, grid size, and pinned and excluded albums.
  * The settings chosen in the settings screen are in [AppSettings].
  */
 class Prefs(context: Context) {
@@ -63,6 +70,19 @@ class Prefs(context: Context) {
     var gridColumns: Int
         get() = preferences.getInt(KEY_GRID_COLUMNS, DEFAULT_GRID_COLUMNS)
         set(value) = preferences.edit().putInt(KEY_GRID_COLUMNS, value).apply()
+
+    /** Relative paths of the pinned albums, in the order they were pinned. */
+    var pinnedAlbums: List<String>
+        get() = runCatching {
+            val array = JSONArray(preferences.getString(KEY_PINNED_ALBUMS, null) ?: return emptyList())
+            List(array.length()) { array.getString(it) }
+        }.getOrDefault(emptyList())
+        set(value) = preferences.edit().putString(KEY_PINNED_ALBUMS, JSONArray(value).toString()).apply()
+
+    /** Relative paths of the albums whose items are hidden from the Photos tab and the collections. */
+    var excludedAlbums: Set<String>
+        get() = preferences.getStringSet(KEY_EXCLUDED_ALBUMS, null).orEmpty().toSet()
+        set(value) = preferences.edit().putStringSet(KEY_EXCLUDED_ALBUMS, value).apply()
 
     /** The value of [E] called [name], or [default] if there is none (unset, or from an older version). */
     private inline fun <reified E : Enum<E>> enumOr(name: String?, default: E): E =

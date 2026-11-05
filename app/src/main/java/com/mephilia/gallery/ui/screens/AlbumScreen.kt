@@ -69,7 +69,8 @@ import com.mephilia.gallery.ui.theme.Dimens
  *
  * Folders follow the chosen sort and filter, which can be changed here. Favorites and on this day keep their own
  * order (newest first), so they offer no sort options and are always grouped by day. A real folder's menu offers
- * to rename or delete it, acting on all its items whatever the filter shows; the screen closes once it's done.
+ * to pin it, hide it from the Photos tab, rename it or delete it (renaming and deleting act on all its items
+ * whatever the filter shows, and close the screen once done).
  *
  * @param bucketId the folder's id, or a pseudo album's (such as [FAVORITES_ID]).
  * @param name the title shown.
@@ -99,6 +100,8 @@ fun AlbumScreen(
         if (isPseudoAlbum(bucketId)) emptyList() else allItems.filter { it.bucketId == bucketId }
     }
     val relativePath = folderItems.firstOrNull()?.relativePath
+    val pinned by vm.pinnedAlbums.collectAsStateWithLifecycle()
+    val excluded by vm.excludedAlbums.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
     var albumAction by remember { mutableStateOf<AlbumAction?>(null) }
     ThemedSystemBars()
@@ -133,9 +136,13 @@ fun AlbumScreen(
                     if (relativePath != null) Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.action_more)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            AlbumMenuEntries(canRenameFolder(relativePath)) {
+                            AlbumMenuEntries(canRenameFolder(relativePath), relativePath in pinned, relativePath in excluded) { action ->
                                 menu = false
-                                albumAction = it
+                                when (action) {
+                                    AlbumAction.TogglePin -> vm.togglePinned(relativePath)
+                                    AlbumAction.ToggleExcluded -> vm.toggleExcluded(relativePath)
+                                    AlbumAction.Rename, AlbumAction.Delete -> albumAction = action
+                                }
                             }
                         }
                     }
@@ -186,7 +193,9 @@ fun AlbumScreen(
             items = folderItems,
             albums = albums,
             onDismiss = { albumAction = null },
+            onRenamed = { newPath -> vm.albumRenamed(relativePath, newPath) },
             onDone = {
+                if (action == AlbumAction.Delete) vm.albumDeleted(relativePath)
                 albumAction = null
                 onBack()
             },

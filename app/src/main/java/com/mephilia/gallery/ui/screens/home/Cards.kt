@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -55,7 +58,7 @@ private const val TRASH_COVER_ALPHA = 0.35f
 /** Size of the small icon badge in the corner of a collection cover. */
 private val BADGE_ICON_SIZE = 20.dp
 
-/** Space between the badge and the corner of the cover. */
+/** Space between the badges and the corner of the cover. */
 private val BADGE_MARGIN = 10.dp
 
 /** Space between the badge icon and the edge of its round background. */
@@ -137,12 +140,39 @@ private fun CoverImage(item: MediaItem, modifier: Modifier = Modifier, descripti
     )
 }
 
-/** A folder, with its most recent item as cover and its item count. [onLongClick] opens the album's actions. */
+/**
+ * A folder, with its most recent item as cover and its item count. A badge marks it when [pinned], another when
+ * [excluded] (hidden from the Photos tab). [onLongClick] opens the album's actions.
+ */
 @Composable
-internal fun AlbumCard(album: Album, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+internal fun AlbumCard(
+    album: Album,
+    modifier: Modifier = Modifier,
+    pinned: Boolean = false,
+    excluded: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     CoverCard(album.name, "${album.count}", modifier, onClick, onLongClick) {
         CoverImage(album.cover, description = album.name)
+        Row(Modifier.align(Alignment.TopEnd).padding(BADGE_MARGIN), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            if (excluded) CoverBadge(Icons.Rounded.VisibilityOff, stringResource(R.string.album_hidden_from_photos))
+            if (pinned) CoverBadge(Icons.Rounded.PushPin, stringResource(R.string.album_pinned))
+        }
     }
+}
+
+/** A small white [icon] on a dark circle, readable on any cover. [description] is read by screen readers. */
+@Composable
+private fun CoverBadge(icon: ImageVector, description: String?, modifier: Modifier = Modifier) {
+    Icon(
+        icon, description,
+        tint = Color.White,
+        modifier = modifier
+            .background(Color.Black.copy(alpha = BADGE_BACKGROUND_ALPHA), CircleShape)
+            .padding(BADGE_PADDING)
+            .size(BADGE_ICON_SIZE),
+    )
 }
 
 /** The trash, with a faded cover under a trash icon, and how many items it holds. */
@@ -170,16 +200,7 @@ internal fun CollectionCard(
     CoverCard(title, subtitle.orEmpty(), modifier, onClick) {
         if (cover != null) {
             CoverImage(cover)
-            Icon(
-                icon, null,
-                tint = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(BADGE_MARGIN)
-                    .background(Color.Black.copy(alpha = BADGE_BACKGROUND_ALPHA), CircleShape)
-                    .padding(BADGE_PADDING)
-                    .size(BADGE_ICON_SIZE),
-            )
+            CoverBadge(icon, null, Modifier.align(Alignment.TopEnd).padding(BADGE_MARGIN))
         } else {
             Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(Dimens.largeIcon))
         }

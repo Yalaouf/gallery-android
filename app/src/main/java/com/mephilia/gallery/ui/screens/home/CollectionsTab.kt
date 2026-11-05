@@ -35,7 +35,8 @@ import com.mephilia.gallery.ui.GalleryViewModel
 
 /**
  * The collections tab: groups of items that aren't folders. On this day, favorites, all photos, all videos,
- * the trash (if enabled in the settings) and the locked folder.
+ * the trash (if enabled in the settings) and the locked folder. Albums hidden from Photos are left out of the
+ * photos and videos counts and covers.
  *
  * @param onOpenCollection opens a pseudo album by its id (such as [FAVORITES_ID]), with its display name.
  */
@@ -51,7 +52,7 @@ internal fun CollectionsTab(
     val favorites by vm.favorites.collectAsStateWithLifecycle()
     val onThisDay by vm.onThisDay.collectAsStateWithLifecycle()
     val trash by vm.trash.collectAsStateWithLifecycle()
-    val all by vm.allItems.collectAsStateWithLifecycle()
+    val all by vm.visibleItems.collectAsStateWithLifecycle()
     val settings by AppSettings.flow.collectAsStateWithLifecycle()
     val (videos, photos) = remember(all) { all.partition { it.isVideo } }
     val photoCover = remember(photos) { photos.maxByOrNull { it.dateTaken } }

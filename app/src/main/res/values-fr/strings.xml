@@ -333,4 +333,10 @@
         <item quantity="many">Ses %d éléments seront mis à la corbeille, où ils resteront récupérables pendant 30 jours.</item>
         <item quantity="other">Ses %d éléments seront mis à la corbeille, où ils resteront récupérables pendant 30 jours.</item>
     </plurals>
+    <string name="action_pin_album">Épingler l\'album</string>
+    <string name="action_unpin_album">Désépingler l\'album</string>
+    <string name="action_hide_from_photos">Masquer de Photos</string>
+    <string name="action_show_in_photos">Afficher dans Photos</string>
+    <string name="album_pinned">Épinglé</string>
+    <string name="album_hidden_from_photos">Masqué de Photos</string>
 </resources>

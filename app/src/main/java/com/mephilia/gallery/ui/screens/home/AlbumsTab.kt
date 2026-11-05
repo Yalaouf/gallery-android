@@ -48,7 +48,8 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * The albums tab: every folder holding photos or videos, with search, sort and album creation.
- * A long-press on an album offers to rename or delete it.
+ * A long-press on an album offers to pin it, hide it from the Photos tab, rename it or delete it.
+ * Pinned albums come first, and pinned or hidden ones carry a badge.
  *
  * @param onNewAlbum starts creating an album with the given name.
  * @param scrollToTop emits when the grid should go back to the top.
@@ -74,6 +75,8 @@ internal fun AlbumsTab(
     val gridState = rememberLazyGridState()
     val shown = remember(albums, query) { filterAlbums(albums, query) }
     val allItems by vm.allItems.collectAsStateWithLifecycle()
+    val pinned by vm.pinnedAlbums.collectAsStateWithLifecycle()
+    val excluded by vm.excludedAlbums.collectAsStateWithLifecycle()
     var menuAlbum by remember { mutableStateOf<Album?>(null) }
     var albumAction by remember { mutableStateOf<Pair<Album, AlbumAction>?>(null) }
 
@@ -122,11 +125,17 @@ internal fun AlbumsTab(
                 else -> CardGrid(state = gridState) {
                     items(shown, key = { it.id }) { album ->
                         Box(snappyItemModifier()) {
-                            AlbumCard(album, onLongClick = { menuAlbum = album }) { onOpen(album) }
+                            val isPinned = album.relativePath in pinned
+                            val isExcluded = album.relativePath in excluded
+                            AlbumCard(album, pinned = isPinned, excluded = isExcluded, onLongClick = { menuAlbum = album }) { onOpen(album) }
                             DropdownMenu(expanded = menuAlbum == album, onDismissRequest = { menuAlbum = null }) {
-                                AlbumMenuEntries(canRenameFolder(album.relativePath)) {
+                                AlbumMenuEntries(canRenameFolder(album.relativePath), isPinned, isExcluded) { action ->
                                     menuAlbum = null
-                                    albumAction = album to it
+                                    when (action) {
+                                        AlbumAction.TogglePin -> vm.togglePinned(album.relativePath)
+                                        AlbumAction.ToggleExcluded -> vm.toggleExcluded(album.relativePath)
+                                        AlbumAction.Rename, AlbumAction.Delete -> albumAction = album to action
+                                    }
                                 }
                             }
                         }
@@ -145,7 +154,11 @@ internal fun AlbumsTab(
             items = folderItems,
             albums = albums,
             onDismiss = { albumAction = null },
-            onDone = { albumAction = null },
+            onRenamed = { newPath -> vm.albumRenamed(album.relativePath, newPath) },
+            onDone = {
+                if (action == AlbumAction.Delete) vm.albumDeleted(album.relativePath)
+                albumAction = null
+            },
         )
     }
 

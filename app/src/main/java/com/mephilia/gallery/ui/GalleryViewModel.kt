@@ -102,25 +102,35 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
     /** Seed of the random order, changed each time "Random" is picked. */
     private val shuffleSeed = MutableStateFlow(Random.nextLong())
 
-    /** The photos tab's items: filtered and sorted. */
+    /** Relative paths of the pinned albums, in the order they were pinned. */
+    val pinnedAlbums = MutableStateFlow(prefs.pinnedAlbums)
+
+    /** Relative paths of the albums hidden from the Photos tab and the collections. */
+    val excludedAlbums = MutableStateFlow(prefs.excludedAlbums)
+
+    /** Every photo and video outside the excluded albums. */
+    val visibleItems: StateFlow<List<MediaItem>> =
+        combine(all, excludedAlbums) { items, excluded -> MediaQueries.withoutExcluded(items, excluded) }.inBackground()
+
+    /** The photos tab's items: filtered and sorted, without the excluded albums. */
     val media: StateFlow<List<MediaItem>> =
-        combine(all, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
+        combine(visibleItems, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
             MediaQueries.sort(MediaQueries.filter(items, filter), sort, seed)
         }.inBackground()
 
-    /** The folders, sorted. */
+    /** The folders, sorted, with the pinned ones first. */
     val albums: StateFlow<List<Album>> =
-        combine(all, albumSort, albumSortDescending) { items, sort, descending ->
-            MediaQueries.albums(items, sort, descending)
+        combine(all, albumSort, albumSortDescending, pinnedAlbums) { items, sort, descending, pinned ->
+            MediaQueries.pinFirst(MediaQueries.albums(items, sort, descending), pinned)
         }.inBackground()
 
     /** The favorites, newest first. */
     val favorites: StateFlow<List<MediaItem>> =
         all.map { items -> items.filter { it.favorite }.sortedByDescending { it.dateTaken } }.inBackground()
 
-    /** Photos and videos taken on today's date in previous years, newest year first. */
+    /** Photos and videos taken on today's date in previous years, newest year first, without the excluded albums. */
     val onThisDay: StateFlow<List<MediaItem>> =
-        all.map { items ->
+        visibleItems.map { items ->
             val zone = ZoneId.systemDefault()
             MediaQueries.onThisDay(items, LocalDate.now(zone), zone)
         }.inBackground()
@@ -168,13 +178,14 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * The items of a folder, or of a pseudo album (favorites, on this day, locked folder, all photos, all videos).
-     * All photos and all videos follow the chosen sort, but not the photos / videos filter.
+     * All photos and all videos follow the chosen sort, but not the photos / videos filter, and leave out the
+     * excluded albums.
      */
     fun albumMedia(bucketId: Long): Flow<List<MediaItem>> = when (bucketId) {
         FAVORITES_ID -> favorites
         ON_THIS_DAY_ID -> onThisDay
         LOCKED_ID -> locked
-        PHOTOS_ID, VIDEOS_ID -> combine(all, mediaSort, shuffleSeed) { items, sort, seed ->
+        PHOTOS_ID, VIDEOS_ID -> combine(visibleItems, mediaSort, shuffleSeed) { items, sort, seed ->
             MediaQueries.sort(items.filter { it.isVideo == (bucketId == VIDEOS_ID) }, sort, seed)
         }.flowOn(Dispatchers.Default)
         else -> combine(all, mediaSort, mediaFilter, shuffleSeed) { items, sort, filter, seed ->
@@ -250,6 +261,42 @@ class GalleryViewModel(app: Application) : AndroidViewModel(app) {
             albumSort.value = sort
             prefs.albumSort = sort
         }
+    }
+
+    /** Pins the album at [relativePath] at the top of the Albums tab, or unpins it. */
+    fun togglePinned(relativePath: String) {
+        val pinned = pinnedAlbums.value
+        savePinned(if (relativePath in pinned) pinned - relativePath else pinned + relativePath)
+    }
+
+    /** Hides the album at [relativePath] from the Photos tab and the collections, or shows it again. */
+    fun toggleExcluded(relativePath: String) {
+        val excluded = excludedAlbums.value
+        saveExcluded(if (relativePath in excluded) excluded - relativePath else excluded + relativePath)
+    }
+
+    /** Keeps the pin and exclusion of an album renamed from [oldPath] to [newPath]. */
+    fun albumRenamed(oldPath: String, newPath: String) {
+        if (oldPath in pinnedAlbums.value) savePinned(pinnedAlbums.value.map { if (it == oldPath) newPath else it })
+        if (oldPath in excludedAlbums.value) saveExcluded(excludedAlbums.value - oldPath + newPath)
+    }
+
+    /** Forgets the pin and exclusion of the deleted album at [relativePath]. */
+    fun albumDeleted(relativePath: String) {
+        if (relativePath in pinnedAlbums.value) savePinned(pinnedAlbums.value - relativePath)
+        if (relativePath in excludedAlbums.value) saveExcluded(excludedAlbums.value - relativePath)
+    }
+
+    /** Sets and saves the pinned albums. */
+    private fun savePinned(pinned: List<String>) {
+        pinnedAlbums.value = pinned
+        prefs.pinnedAlbums = pinned
+    }
+
+    /** Sets and saves the excluded albums. */
+    private fun saveExcluded(excluded: Set<String>) {
+        excludedAlbums.value = excluded
+        prefs.excludedAlbums = excluded
     }
 
     /** Shows the photo grid with [columns] columns. */
